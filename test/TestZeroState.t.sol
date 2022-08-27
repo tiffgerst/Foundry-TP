@@ -81,11 +81,62 @@ contract TestRegistry is ZeroState {
 contract TestFactory is ZeroState{
     function testDeployPool() public{
         vm.expectRevert(bytes("Only the owner can deploy a token pool"));
-        factory.deployTokenPool(tokenAddress[1], feedAddress[1], concentration[1]);
+        factory.deployTokenPool(tokenAddress[1], feedAddress[1], concentration[1],18);
         vm.prank(deployer);
-        factory.deployTokenPool(address(10), address(20), concentration[1]);
+        factory.deployTokenPool(address(10), address(20), concentration[1],18);
         address pool = registry.tokenToPool(address(10));
         assertEq(registry.tokenPools(3), pool);
         assertEq(registry.PoolToConcentration(pool), concentration[1]);
     }
+}
+
+contract TestTreasury is ZeroState {
+    function testWhitelistUser() public {
+        vm.expectRevert(Treasury.Error_Unauthorized.selector);
+        trsy.whitelistUser(address(10));
+        vm.prank(deployer);
+        trsy.whitelistUser(address(10));
+        assertEq(trsy.whitelistedUsers(address(10)), true);
+        assertEq(trsy.whitelistedUsers(address(11)), false);
+    }
+    function testWhitelistToken()public {
+        vm.expectRevert(Treasury.Error_Unauthorized.selector);
+        trsy.whitelistToken(tokenAddress[1]);
+        vm.prank(deployer);
+        trsy.whitelistToken(address(15));
+        assertEq(trsy.whitelistedTokens(address(15)), true);
+        assertEq(trsy.whitelistedTokens(address(16)), false);
+    }
+    function testDepositNotWhitelisted() public {
+        vm.prank(address(20));
+        vm.expectRevert(bytes("User is not whitelisted"));
+        trsy.deposit(100, tokenAddress[1]);
+    }
+
+    function testDepositTokenNotWhitelisted() public{
+        vm.prank(deployer);
+        trsy.whitelistUser(address(2));
+        vm.prank(address(2));
+        vm.expectRevert(bytes("Token is not whitelisted"));
+        trsy.deposit(100, address(16));
+    }
+
+    function testWithdrawUserNotWhitelisted() public{
+        vm.prank(address(20));
+        vm.expectRevert(bytes("User is not whitelisted"));
+        trsy.withdraw(100);
+    }
+
+    function testGetTRSYamount(uint256 amount) public{
+        vm.assume(amount > 0);
+        vm.assume(amount < 1e50);
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            (uint256 val,) = ITokenPool(pools[i]).getDepositValue(amount);
+           (,int256 price,,,) = feedContract[i].latestRoundData();
+            uint256 decimals = feedContract[i].decimals();
+            assertEq(val, amount * (uint256(price) * (10**(18-decimals))) / 10 ** 18);
+            
+    }
+    
+}
 }

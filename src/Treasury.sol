@@ -21,8 +21,7 @@ uint256 constant PRECISION = 1e6;
 
 //Errors
 error Error_Unauthorized();
-error Error_UserNotWhitelisted();
-error Error_TokenNotWhitelisted();
+
 
 modifier onlyOwner() {
         if (msg.sender != owner) {
