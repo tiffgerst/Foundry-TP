@@ -10,26 +10,30 @@ IERC20 public token;
 address public chainlinkfeed;
 uint256 public targetconcentration;
 AggregatorV3Interface public oracle;
+uint256 public decimal;
 
-constructor (address _tokenAddress, address _chainlinkfeed, uint256 _targetconcentration)  {
+constructor (address _tokenAddress, address _chainlinkfeed, uint256 _targetconcentration, uint256 _decimal)  {
     token = IERC20(_tokenAddress);
     chainlinkfeed = _chainlinkfeed;
     oracle = AggregatorV3Interface(_chainlinkfeed);
     targetconcentration = _targetconcentration;
+    decimal = _decimal;
+
 }
 function getPrice() public view returns (uint256){
     (,int256 price, , , ) = oracle.latestRoundData();
-    return uint256(price) * 10**10;
+    uint256 decimals = oracle.decimals();
+    return uint256(price) * (10**(18-decimals));
 }
 
 function getPoolValue() external view returns(uint256, uint256){
     uint256 price = getPrice();
-    return ((token.balanceOf(address(this)) * price)/10**18, targetconcentration);
+    return ((token.balanceOf(address(this)) * price)/10**decimal, targetconcentration);
 }
 
 function getDepositValue(uint256 _amount) external view returns(uint256, uint256){
     uint256 price = getPrice();
-    return (_amount * price / 10**18, targetconcentration);
+    return (_amount * price / 10**decimal, targetconcentration);
 }
 
 function withdrawToken(address receiver, uint256 amount) external  {

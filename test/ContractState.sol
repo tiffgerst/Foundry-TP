@@ -57,7 +57,7 @@ abstract contract ZeroState is Test {
             vm.label(address(erc20), string.concat("Feed ", tokenName[i]));
 
             // Create new pools
-            factory.deployTokenPool(address(erc20), feedAddress[i], concentration[i]);
+            factory.deployTokenPool(address(erc20), feedAddress[i], concentration[i],18);
             address pool = registry.tokenToPool(address(erc20));
             TokenPool p = TokenPool(pool);
             vm.label(pool, string.concat("Pool ", tokenName[i]));
