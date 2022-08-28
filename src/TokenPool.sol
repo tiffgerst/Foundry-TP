@@ -33,7 +33,7 @@ function getPoolValue() external view returns(uint256, uint256){
 
 function getDepositValue(uint256 _amount) external view returns(uint256, uint256){
     uint256 price = getPrice();
-    return (_amount * price / 10**decimal, targetconcentration);
+    return ((_amount * price) / (10 ** decimal), targetconcentration);
 }
 
 function withdrawToken(address receiver, uint256 amount) external  {

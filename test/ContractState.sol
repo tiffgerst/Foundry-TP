@@ -14,13 +14,15 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 // ZeroState represent the initial state of the deployment where all the contracts are deployed.
 abstract contract ZeroState is Test {
-    Registry registry;
-    TokenPoolFactory factory;
-    Treasury trsy;
-    MockERC20[] erc20Contract;
-    AggregatorV3Interface[] feedContract;
-    TokenPool[] tokenPools;
-    TRSYERC20 token;
+    Registry public registry;
+    IERC20 public TRSY;
+    TokenPoolFactory public factory;
+    Treasury public trsy;
+    MockERC20[] public erc20Contract;
+    AggregatorV3Interface[] public feedContract;
+    TokenPool[] public tokenPools;
+    TRSYERC20 public token;
+    address trsytoken;
 
     address public deployer = address(1);
 
@@ -36,7 +38,10 @@ abstract contract ZeroState is Test {
 
         // Deploy main contracts
         registry = new Registry();
-        token = new TRSYERC20(1000000000000000000000);
+        token = new TRSYERC20();
+        // trsytoken = address(token);
+        // TRSY = IERC20(trsytoken);
+        token.mint(deployer, 1000000000000000000000);
         trsy = new Treasury(address(token), address(registry));
         factory =
             new TokenPoolFactory(address(registry));

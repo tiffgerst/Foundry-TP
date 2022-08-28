@@ -1,8 +1,8 @@
 //SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "./interfaces/ITRSY.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import "./TRSYERC20.sol";
 import "./TokenPool.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/ITokenPool.sol";
@@ -12,7 +12,7 @@ import "./Registry.sol";
 contract Treasury {
 
 // State Variables
-ITRSY public immutable TRSY;
+TRSYERC20 public immutable TRSY;
 mapping (address => bool) public whitelistedUsers;
 mapping (address => bool) public whitelistedTokens;
 address public owner;
@@ -21,6 +21,7 @@ uint256 constant PRECISION = 1e6;
 
 //Errors
 error Error_Unauthorized();
+error InsufficientBalance(uint256 available, uint256 required);
 
 
 modifier onlyOwner() {
@@ -42,7 +43,7 @@ constructor(
     ) {
     owner = msg.sender;
     registry = _registry;
-    TRSY = ITRSY(_trsy);
+    TRSY = TRSYERC20(_trsy);
     }
     
     function whitelistUser(address _user) public onlyOwner {
@@ -67,7 +68,6 @@ constructor(
     }
     function getTRSYAmount(uint256 _amount) public view returns (uint256){
         uint256 tvl = IRegistry(registry).getTotalPoolsAUMinUSD();
-
         uint256 supply = TRSY.totalSupply();
         return supply == 0 ? _amount : _amount * (supply / tvl);
     
@@ -77,10 +77,14 @@ constructor(
         require(whitelistedUsers[msg.sender], "User is not whitelisted");
         require(_amount > 0, "Amount must be greater than 0");
         uint256 trsyamt = TRSY.balanceOf(msg.sender);
-        require(trsyamt >= _amount, "Not enough TRSY.");
+        // if (trsyamt < _amount) {
+        //     revert InsufficientBalance({available: trsyamt, required: _amount});
+        // }
+        require(_amount <= trsyamt, "Amount must be less than balance");
+
         uint256 usdamt = getWithdrawAmount(_amount);
         (address[] memory pools, uint256[] memory amt) = IRegistry(registry).tokensToWithdraw(usdamt);
-        TRSY.burnFrom(msg.sender, _amount);
+        TRSY.burn(msg.sender, _amount);
         uint len = pools.length;
         for (uint i; i<len;){
             address pool = pools[i];
