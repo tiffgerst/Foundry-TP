@@ -6,6 +6,6 @@ interface IRegistry {
 
     function tokenToPool(address) external view returns (address);
 
-    function getTotalPoolsAUMinUSD() external view returns (uint256);
+    function getTotalAUMinUSD() external view returns (uint256);
     
     function tokensToWithdraw(uint256 _amount) external view returns (address[] memory, uint256[] memory);}

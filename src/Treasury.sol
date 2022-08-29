@@ -59,17 +59,17 @@ constructor(
         require(whitelistedTokens[_token], "Token is not whitelisted");
         require(_amount > 0, "Amount must be greater than 0");
         address pool = IRegistry(registry).tokenToPool(_token);
-        (uint256 USDValue,) = ITokenPool(_token).getDepositValue(_amount);
+        (uint256 USDValue,) = ITokenPool(pool).getDepositValue(_amount);
         uint256 trsyamt = getTRSYAmount(USDValue);
-        bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
+        bool success = TRSYERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);
         TRSY.mint(msg.sender, trsyamt);
         emit TokenDeposited(msg.sender, _token, _amount, USDValue, trsyamt);
     }
     function getTRSYAmount(uint256 _amount) public view returns (uint256){
-        uint256 tvl = IRegistry(registry).getTotalPoolsAUMinUSD();
+        uint256 tvl = IRegistry(registry).getTotalAUMinUSD();
         uint256 supply = TRSY.totalSupply();
-        return supply == 0 ? _amount : _amount * (supply / tvl);
+        return tvl == 0 ? _amount : _amount * (supply / tvl);
     
     }
 
@@ -77,11 +77,9 @@ constructor(
         require(whitelistedUsers[msg.sender], "User is not whitelisted");
         require(_amount > 0, "Amount must be greater than 0");
         uint256 trsyamt = TRSY.balanceOf(msg.sender);
-        // if (trsyamt < _amount) {
-        //     revert InsufficientBalance({available: trsyamt, required: _amount});
-        // }
-        require(_amount <= trsyamt, "Amount must be less than balance");
-
+        if (trsyamt < _amount) {
+            revert InsufficientBalance({available: trsyamt, required: _amount});
+        }
         uint256 usdamt = getWithdrawAmount(_amount);
         (address[] memory pools, uint256[] memory amt) = IRegistry(registry).tokensToWithdraw(usdamt);
         TRSY.burn(msg.sender, _amount);
@@ -99,7 +97,7 @@ constructor(
 
     function getWithdrawAmount(uint256 trsyamt) public view returns(uint256) {
         uint256 trsy = (PRECISION * trsyamt) / TRSY.totalSupply();
-        uint256 tvl = IRegistry(registry).getTotalPoolsAUMinUSD();
+        uint256 tvl = IRegistry(registry).getTotalAUMinUSD();
         uint256 usdAmount = (tvl * trsy) / PRECISION;
         return usdAmount;
     }

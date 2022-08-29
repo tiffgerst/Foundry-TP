@@ -3,6 +3,7 @@ pragma solidity 0.8.12;
 
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./interfaces/ITokenPool.sol";
+import "./TokenPool.sol";
 
 contract Registry {
 //Variables
