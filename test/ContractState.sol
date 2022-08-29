@@ -14,13 +14,14 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 // ZeroState represent the initial state of the deployment where all the contracts are deployed.
 abstract contract ZeroState is Test {
-    Registry registry;
-    TokenPoolFactory factory;
-    Treasury trsy;
-    MockERC20[] erc20Contract;
-    AggregatorV3Interface[] feedContract;
-    TokenPool[] tokenPools;
-    TRSYERC20 token;
+    Registry public registry;
+    TokenPoolFactory public factory;
+    Treasury public trsy;
+    MockERC20[] public erc20Contract;
+    AggregatorV3Interface[] public feedContract;
+    TokenPool[] public tokenPools;
+    TRSYERC20 public token;
+    address trsytoken;
 
     address public deployer = address(1);
 
@@ -36,11 +37,12 @@ abstract contract ZeroState is Test {
 
         // Deploy main contracts
         registry = new Registry();
-        token = new TRSYERC20(1000000000000000000000);
+        token = new TRSYERC20();
+        //token.mint(deployer, 1000000000000000000000);
         trsy = new Treasury(address(token), address(registry));
         factory =
             new TokenPoolFactory(address(registry));
-        vm.label(address(registry), "PoolRegistry");
+        vm.label(address(registry), "Registry");
         vm.label(address(trsy), "Treasury");
         vm.label(address(factory), "TokenPoolFactory");
 
@@ -99,12 +101,10 @@ abstract contract InitState is ZeroState {
             erc.transfer(user2, 10000000000000000000);
             trsy.whitelistToken(tokenAddress[i]);
             vm.stopPrank();
-            vm.startPrank(user1);
+            vm.prank(user1);
             erc.approve(address(trsy), 10000000000000000000);
-            vm.stopPrank();
-            vm.startPrank(user2);
+            vm.prank(user2);
             erc.approve(address(trsy), 10000000000000000000);
-            vm.stopPrank();
             unchecked {
                 i++;
             }

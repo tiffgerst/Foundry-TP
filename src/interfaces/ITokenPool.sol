@@ -2,6 +2,8 @@
 pragma solidity 0.8.12;
 
 interface ITokenPool {
+    
+    
     function getPoolValue() external view returns (uint256,uint256);
 
     function getDepositValue(uint256) external view returns (uint256,uint256);
