@@ -7,6 +7,8 @@ import "./TokenPool.sol";
 import "./interfaces/IRegistry.sol";
 import "./interfaces/ITokenPool.sol";
 import "./Registry.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+
 
 
 contract Treasury {
@@ -61,7 +63,7 @@ constructor(
         address pool = IRegistry(registry).tokenToPool(_token);
         (uint256 USDValue,) = ITokenPool(pool).getDepositValue(_amount);
         uint256 trsyamt = getTRSYAmount(USDValue);
-        bool success = TRSYERC20(_token).transferFrom(msg.sender, pool, _amount);
+        bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);
         TRSY.mint(msg.sender, trsyamt);
         emit TokenDeposited(msg.sender, _token, _amount, USDValue, trsyamt);
@@ -85,14 +87,20 @@ constructor(
         TRSY.burn(msg.sender, _amount);
         uint len = pools.length;
         for (uint i; i<len;){
+            if( pools[i]!= address(0)){
             address pool = pools[i];
-            ITokenPool(pool).withdrawToken(msg.sender,amt[i]);
-            unchecked{++i;}
+            uint256 amount = getTokenAmount(amt[i], pools[i]);
+            ITokenPool(pool).withdrawToken(msg.sender,amount);
+            }unchecked{++i;}
         }
         
         
-        
+    
 
+    }
+    function getTokenAmount(uint usdamt, address pool) public returns (uint256){
+        uint price = ITokenPool(pool).getPrice();
+        return (usdamt * 10**18)/price;
     }
 
     function getWithdrawAmount(uint256 trsyamt) public view returns(uint256) {

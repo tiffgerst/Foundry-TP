@@ -9,4 +9,6 @@ interface ITokenPool {
     function getDepositValue(uint256) external view returns (uint256,uint256);
     
     function withdrawToken(address , uint256) external ;
+    
+    function getPrice() external returns (uint);
 }

@@ -64,10 +64,10 @@ modifier onlyOwner() {
         PoolToConcentration[_pool] = _target;
     }
 
-    function getConcentrationDifference(address pool) view public returns(uint256){
+    function getConcentrationDifference(address pool) view public returns(int){
         uint256 total = getTotalAUMinUSD();
         (uint256 poolBalance, uint256 target) = ITokenPool(pool).getPoolValue();            
-        uint256 difference = poolBalance*PRECISION/total - target;
+        int difference = int(poolBalance)*int(PRECISION)/int(total) - int(target);
         return difference;
     }
 
@@ -84,17 +84,12 @@ modifier onlyOwner() {
         return total;
     }
 
-    function tokensToWithdraw(uint256 _amount) external returns (address[] memory, uint256[] memory){
+    function tokensToWithdraw(uint256 _amount) public returns (address[] memory, uint256[] memory){
         (address[] memory pools, uint256[] memory tokenAmt) = liquidityCheck(_amount);
-        //address[] memory tokens;
-        // uint len = pools.length;
-        // for (uint i; i<len;){
-        //     tokens[i] = PoolToToken[pools[i]];
-        // }
         return (pools, tokenAmt);
     }
 
-    function findMax (Rebalancing[] memory _rebalance) internal pure returns (Rebalancing memory, uint256){ 
+    function findMax (Rebalancing[] memory _rebalance) public pure returns (Rebalancing memory, uint256){ 
         uint256 len = _rebalance.length;
         uint max = 0;
         uint index = 0;
@@ -108,7 +103,7 @@ modifier onlyOwner() {
         return (_rebalance[index],index);
     }
 
-    function liquidityCheck(uint256 _amount) internal  returns (address[] memory, uint256[] memory){
+    function liquidityCheck(uint256 _amount) public  returns (address[] memory, uint256[] memory){
         Rebalancing[] memory rebalance = getWithdrawRebalancing();
         uint256 len = rebalance.length;
         uint256 total = 0;
@@ -127,14 +122,15 @@ modifier onlyOwner() {
     }
     function WithdrawWhenLiquidityIsHigher(Rebalancing[] memory _rebalance, uint256 _amount) internal pure returns(address[] memory, uint256[] memory) {
         uint256 len = _rebalance.length;
-        address[] memory pool;
-        uint256[] memory tokenamt;
+        address[] memory pool = new address[](len);
+        uint256[] memory tokenamt = new uint256[](len);
         uint256 total = 0;
         for (uint i; i<len;){
             (Rebalancing memory max, uint index) = findMax(_rebalance);
             if (total + max.amt > _amount){
                 tokenamt[i]= (_amount - total);
                 pool[i] = (max.pool);
+                return (pool, tokenamt);
             }
             else{
                 tokenamt[i] = (max.amt);
@@ -145,16 +141,22 @@ modifier onlyOwner() {
             unchecked{++i;}
           
         }
-        return (pool, tokenamt);
     }
        
     function WithdrawWhenLiquidityIsLower(uint256 _amount, uint256 _total) internal view returns(address[] memory, uint256[] memory) {
         uint256 len = tokenPools.length;
-        address[] memory pool;
-        uint256[] memory tokenamt;
+        address[] memory pool = new address[](len);
+        uint256[] memory tokenamt = new uint256[](len);
         uint256 remainder = _amount - _total;
         uint256 liquidityPerPool = remainder/len;
+        //todo: find solution for when pool has less money than liquidity per pool
         for (uint i = 0; i<len;){
+        //     (uint poolBalance,) = ITokenPool(tokenPools[i]).getPoolValue();
+        //     if ( poolBalance < liquidityPerPool){
+        //         tokenamt[i] = poolBalance;
+        //         pool[i] = tokenPools[i];
+        //         uint extra = liquidityPerPool-poolBalance;
+        //     }
             pool[i] = (tokenPools[i]);
             tokenamt[i] = (poolsToWithdrawFrom[tokenPools[i]] + liquidityPerPool);
             unchecked{++i;}
@@ -162,18 +164,22 @@ modifier onlyOwner() {
         return (pool, tokenamt);
     }
 
-    function getWithdrawRebalancing() internal returns(Rebalancing[] memory){
-        Rebalancing[] memory rebalance;
+    function getWithdrawRebalancing() public returns(Rebalancing[] memory){
         uint256 len = tokenPools.length;
+        Rebalancing[] memory rebalance = new Rebalancing[](len);
+        uint j = 0;
         for (uint i = 0; i < len;) {
             address pools = tokenPools[i];
             poolsToWithdrawFrom[pools] = 0;
-            uint256 concentrationDifference = getConcentrationDifference(pools);
+            int cD = getConcentrationDifference(pools);
+            uint concentrationDifference = cD < 0 ? uint(0) : uint(cD);
             if (concentrationDifference>0){
                  (uint256 poolBalance, ) = ITokenPool(pools).getPoolValue();
                 uint256 tokenamt = (uint256(concentrationDifference) * poolBalance) /PRECISION;
-                rebalance[i] = Rebalancing({pool:pools, amt:tokenamt});
+                rebalance[j] = Rebalancing({pool:pools, amt:tokenamt});
+                j+=1;
                 poolsToWithdrawFrom[pools] = concentrationDifference;
+                
             }
            
         unchecked{++i;}

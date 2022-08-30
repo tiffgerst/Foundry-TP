@@ -128,15 +128,15 @@ contract TestTreasury is ZeroState {
         trsy.withdraw(100);
     }
 
-    function testGetTRSYamount() public{
-        uint256 amount = 1000;
+    function testGetTRSYamount(uint256 amount) public{
+        vm.assume(amount > 0);
+        vm.assume(amount < 1e50);
         for (uint256 i = 0; i < tokenAddress.length; i++) {
             (uint256 val,) = ITokenPool(pools[i]).getDepositValue(amount);
            (,int256 price,,,) = feedContract[i].latestRoundData();
             uint256 decimals = feedContract[i].decimals();
             assertEq(val, amount * (uint256(price) * (10**(18-decimals))) / 10 ** 18);    
         }
-        emit log_named_uint("My log",token.totalSupply());
     
 }
 }
