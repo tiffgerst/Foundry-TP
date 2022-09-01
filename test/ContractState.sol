@@ -23,14 +23,14 @@ abstract contract ZeroState is Test {
     TRSYERC20 public token;
     address trsytoken;
 
-    address public deployer = address(1);
+    address public deployer = vm.addr(1);
 
     string[3] public tokenName = ["dai", "aave", "ethereum"];
     address[3] public tokenAddress;
     address[3] public feedAddress = [0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9, 0x547a514d5e3769680Ce22B2361c10Ea13619e8a9,0xaEA2808407B7319A31A383B6F8B60f04BCa23cE2];
     address[3] public pools;
     uint256[3] public concentration = [500000, 300000, 200000];
-    uint256 public amountReceived = 10000000000000000000;
+    uint256  amountReceived = 10000e18;
 
     function setUp() public virtual {
         vm.label(deployer, "Deployer");
@@ -39,7 +39,6 @@ abstract contract ZeroState is Test {
         // Deploy main contracts
         registry = new Registry();
         token = new TRSYERC20();
-        //token.mint(deployer, 1000000000000000000000);
         trsy = new Treasury(address(token), address(registry));
         factory =
             new TokenPoolFactory(address(registry));
@@ -81,8 +80,8 @@ abstract contract ZeroState is Test {
 }
 
 abstract contract InitState is ZeroState {
-    address user1 = address(2);
-    address user2 = address(3);
+    address user1 = vm.addr(2);
+    address user2 = vm.addr(3);
 
     ERC20 erc;
 
