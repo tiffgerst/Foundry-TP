@@ -20,7 +20,7 @@ constructor (address _tokenAddress, address _chainlinkfeed, uint256 _targetconce
     decimal = _decimal;
 
 }
-function getPrice() public view returns (uint256){
+function getPrice() public  view returns (uint256){
     (,int256 price, , , ) = oracle.latestRoundData();
     uint256 decimals = oracle.decimals();
     return (uint256(price) * (10**(18-decimals)));
