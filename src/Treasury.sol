@@ -95,13 +95,10 @@ constructor(
             unchecked{++i;}
         }
         
-        
-    
-
     }
     function getTokenAmount(uint usdamt, address pool) public returns (uint256){
         uint price = ITokenPool(pool).getPrice();
-        return (usdamt * 10**18)/price;
+        return ((usdamt * 10**18)/price);
     }
 
     function getWithdrawAmount(uint256 trsyamt) public view returns(uint256) {

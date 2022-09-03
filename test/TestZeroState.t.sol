@@ -48,17 +48,14 @@ contract TestZeroState is ZeroState {
             (,int price, , ,) = AggregatorV3Interface(feedAddress[i]).latestRoundData();
             (,int feedprice, , ,) = feedContract[i].latestRoundData();
             assertEq(price, feedprice);
-            assertEq(erc20Contract[i].totalSupply(), 1000000000000000000000);
-            assertEq(
-                erc20Contract[i].balanceOf(deployer), 1000000000000000000000
-            );
-            assertEq(
-                erc20Contract[i].balanceOf(address(1)), 1000000000000000000000
-            );
+            assertEq(erc20Contract[i].totalSupply(), 20000000000000000000000);
+            assertEq(erc20Contract[i].balanceOf(deployer), 20000000000000000000000);
+            
         }
     } 
 
 }
+
 
 contract TestRegistry is ZeroState {
     

@@ -81,10 +81,11 @@ function testDepositWithdraw() public {
     }
 
 //     function testOwnWithdraw() public {
-//         for (uint256 i = 0; i < tokenAmountA.length; i++) {
+//         uint[] memory amountA = [uint256(10000e18), uint256(100e17), uint256(300e16];
+//         for (uint256 i = 0; i < tokenAddress.length; i++) {
 //             address pool = registry.tokenToPool(tokenAddress[i]);
 //             vm.prank(user1);
-//             trsy.deposit( tokenAmountA[i],tokenAddress[i]);
+//             trsy.deposit(,tokenAddress[i]);
 //             vm.prank(user2);
 //             trsy.deposit(tokenAmountB[i],tokenAddress[i]);
 //     }

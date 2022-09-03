@@ -141,6 +141,7 @@ modifier onlyOwner() {
             unchecked{++i;}
           
         }
+        return (pool, tokenamt);
     }
        
     function WithdrawWhenLiquidityIsLower(uint256 _amount, uint256 _total) internal view returns(address[] memory, uint256[] memory) {
@@ -148,9 +149,37 @@ modifier onlyOwner() {
         address[] memory pool = new address[](len);
         uint256[] memory tokenamt = new uint256[](len);
         uint256 remainder = _amount - _total;
-        uint256 liquidityPerPool = remainder/len;
-        //todo: find solution for when pool has less money than liquidity per pool
         for (uint i = 0; i<len;){
+            address pools = tokenPools[i];
+            uint aum = getTotalAUMinUSD();
+            uint256 total = aum - _total;
+            uint extra = 0;
+            (uint256 pre, uint256 target) = ITokenPool(pools).getPoolValue();  
+            if (aum == pre) {
+                pool[i] = tokenPools[i];
+                tokenamt[i] = poolsToWithdrawFrom[tokenPools[i]]+ remainder;
+                return (pool, tokenamt);
+            }   
+            else if (pre==0){
+                pool[i] = tokenPools[i];
+                tokenamt[i] = 0;
+            }  
+            
+            else {
+            uint post = pre - poolsToWithdrawFrom[tokenPools[i]]; 
+            while ((remainder > 0) && (((post * PRECISION)/total) > target)){
+                uint amt = ((((post * PRECISION)/total) - target) * post) / PRECISION;
+                post -= amt;
+                total -= amt;
+                
+                if (remainder - amt > 0) {
+                    remainder -=amt;
+                }
+                else{
+                    amt = remainder;
+                }
+                extra += amt;
+            }  
         //     (uint poolBalance,) = ITokenPool(tokenPools[i]).getPoolValue();
         //     if ( poolBalance < liquidityPerPool){
         //         tokenamt[i] = poolBalance;
@@ -158,12 +187,19 @@ modifier onlyOwner() {
         //         uint extra = liquidityPerPool-poolBalance;
         //     }
             pool[i] = (tokenPools[i]);
-            tokenamt[i] = (poolsToWithdrawFrom[tokenPools[i]] + liquidityPerPool);
+            tokenamt[i] = poolsToWithdrawFrom[tokenPools[i]]+ extra;}
             unchecked{++i;}
         }
         return (pool, tokenamt);
     }
 
+    // function hasToRebalanceDW(address pool) public returns (bool,bool){
+    //      address pools = pool;
+    //         int cD = getConcentrationDifference(pools);
+    //         if (cD < 0){
+
+    //         }
+    // }
     function getWithdrawRebalancing() public returns(Rebalancing[] memory){
         uint256 len = tokenPools.length;
         Rebalancing[] memory rebalance = new Rebalancing[](len);
@@ -178,7 +214,7 @@ modifier onlyOwner() {
                 uint256 tokenamt = (uint256(concentrationDifference) * poolBalance) /PRECISION;
                 rebalance[j] = Rebalancing({pool:pools, amt:tokenamt});
                 j+=1;
-                poolsToWithdrawFrom[pools] = concentrationDifference;
+                poolsToWithdrawFrom[pools] = tokenamt;
                 
             }
            

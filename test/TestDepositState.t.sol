@@ -57,49 +57,16 @@ contract TestTRSY is FirstDepositState {
         emit log_uint(trsy.getTokenAmount(419232812450000000000, pools[1]));
     }
     function testWithdraw() public {
-        uint256 tsryToWithdraw = token.balanceOf(user1) / 2; // Widthraw 50 %
+        uint256 tsryToWithdraw = token.balanceOf(user1); // Widthraw 50 %
         address pool = registry.tokenToPool(tokenAddress[1]);
+        emit log_uint(erc20Contract[1].balanceOf(pool));
         vm.prank(user1);
         trsy.withdraw(tsryToWithdraw);
-        assertEq(token.balanceOf(user1), tsryToWithdraw);
-        assertEq(erc20Contract[1].balanceOf(user1), (amountReceived - amountDeposited) + amountDeposited / 2);
-        assertEq(erc20Contract[1].balanceOf(pool), amountDeposited / 2);
+        assertEq(token.balanceOf(user1), 0);
+        assertEq(erc20Contract[1].balanceOf(user1), amountReceived );
+        assertEq(erc20Contract[1].balanceOf(pool), 0);
         emit log_uint(erc20Contract[1].balanceOf(pool));
-    }
-    
-    // function testFuzzWithdraw(uint256 amount) public {
-    //     amount = bound(amount, 1, token.totalSupply());
-    //     uint256 tsryToWithdraw = amount;
-    //     address pool = registry.tokenToPool(tokenAddress[1]);
-    //     uint256 totalSupply = token.totalSupply();
-    //     uint256 preBal = token.balanceOf(user1);
-    //     uint256 aum = registry.getTotalAUMinUSD();
-    //     (uint256 poolAum,) = ITokenPool(pool).getPoolValue();
-    //     uint256 shareOfThePool = (PRECISION * tsryToWithdraw) / totalSupply;
-    //     uint256 tokenPreBal = erc20Contract[1].balanceOf(user1);
-    //     vm.prank(user1);
-    //     trsy.withdraw(tsryToWithdraw);
-
-    //     uint256 tsryBurn = preBal - token.balanceOf(user1); // Amount burn
-    //     (uint256 liquidityReceived,) =
-    //         ITokenPool(pool).getDepositValue(erc20Contract[1].balanceOf(user1) - tokenPreBal);
-    //     uint256 expectedLiquidity = shareOfThePool * aum / PRECISION;
-    //     (uint hi,)= ITokenPool(pool).getPoolValue();
-
-    //     // Case where user have been able to withdraw all the liquidity (enough liquidity in pools)
-    //     if (tsryBurn == amount) {
-    //         assertEq(tsryBurn, liquidityReceived);
-    //         // assertEq(expectedLiquidity, liquidityReceived);
-    //         // assertEq(aum - tsryBurn, registry.getTotalAUMinUSD());
-    //         // assertEq(poolAum - tsryBurn,hi );
-    //     }
-    //     // Case where not enough liquitiy
-    //     // else {
-    //     //     assertApproxEqRel(tsryBurn, liquidityReceived, 1e15); // 0.1 % Tolerance
-    //     //     assertApproxEqRel(aum - tsryBurn, registry.getTotalAUMinUSD(), 1e15);
-    //     //     assertApproxEqRel(poolAum - tsryBurn, hi, 1e15);
-    //     // }
-    // }
+    }  
 
 }
 
