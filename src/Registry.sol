@@ -147,12 +147,12 @@ modifier onlyOwner() {
         }
         return (_rebalance[index],index);
     }
-    function getConcentrationDifference(address pool) view public returns(int){
+
+    function getConcentration(address pool) view public returns(uint){
             uint256 total = getTotalAUMinUSD();
             uint256 poolBalance = ITokenPool(pool).getPoolValue();     
-            uint256 target = PoolToConcentration[pool];   
-            int difference = int(poolBalance)*int(PRECISION)/int(total) - int(target);
-            return difference;
+            uint current = poolBalance*PRECISION/total;   
+            return current;
         }
-        
+    
 }

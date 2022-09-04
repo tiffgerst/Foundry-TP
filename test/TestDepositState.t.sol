@@ -110,11 +110,14 @@ contract TestRegistry is FirstDepositState {
         uint256 totalAUM = registry.getTotalAUMinUSD();
         uint256 poolAUM = ITokenPool(pools[1]).getPoolValue();
         uint concentration = registry.PoolToConcentration(pools[1]);
-        int poolConcentrationDiff = registry.getConcentrationDifference(pools[1]);
-        assertEq(poolConcentrationDiff, 700000);
-        assertEq(poolConcentrationDiff, int((((poolAUM/totalAUM))*PRECISION) - concentration));
-        int pcd = registry.getConcentrationDifference(pools[0]);
-        assertEq(0-pcd, 500000);
+        uint poolConcentration = registry.getConcentration(pools[1]);
+        int difference = int(poolConcentration) - int(concentration);
+        assertEq(difference, 700000);
+        assertEq(difference, int((((poolAUM/totalAUM))*PRECISION) - concentration));
+        uint pcd = registry.getConcentration(pools[0]);
+        uint target = registry.PoolToConcentration(pools[0]);
+        int diff = int(pcd) - int(target);
+        assertEq(0-diff, 500000);
     }
 
     function testGetAllPoolAUM() public {

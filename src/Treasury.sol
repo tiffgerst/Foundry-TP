@@ -59,9 +59,10 @@ constructor(
     function deposit(uint256 _amount, address _token) public {
         require(whitelistedUsers[msg.sender], "User is not whitelisted");
         require(whitelistedTokens[_token], "Token is not whitelisted");
-        require(_amount > 0, "Amount must be greater than 0");
         address pool = IRegistry(registry).tokenToPool(_token);
         uint256 USDValue = ITokenPool(pool).getDepositValue(_amount);
+        require(USDValue > 1e18, "Amount must be greater than 0");
+        
         uint256 trsyamt = getTRSYAmount(USDValue);
         bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);
@@ -71,7 +72,7 @@ constructor(
     function getTRSYAmount(uint256 _amount) public view returns (uint256){
         uint256 tvl = IRegistry(registry).getTotalAUMinUSD();
         uint256 supply = TRSY.totalSupply();
-        return tvl == 0 ? _amount : _amount * (supply / tvl);
+        return tvl == 0 ? _amount : (_amount * supply) / tvl;
     
     }
 

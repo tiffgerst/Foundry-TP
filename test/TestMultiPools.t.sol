@@ -10,85 +10,54 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract TestMultiPools is InitState {
     uint256 constant PRECISION = 1e6;
-function testDepositWithdraw() public {
-        uint256[3] memory tokenAmountA = [uint256(10000e18), uint256(100e17), uint256(300e16)];
-        uint256[3] memory tokenAmountB = [uint256(8000e18), uint256(50e17), uint256(400e16)];
-        uint256[3] memory depositUserA;
-        uint256[3] memory depositUserB;
-        uint256[3] memory expectPoolAum;
-        uint256[3] memory conc;
-        uint256 sumDepositA;
-        uint256 sumDepositB;
-        uint256 totalAum;
-
-        // User1 and User2 deposit some token in the protocol
-        // We check if the TVL correspond to what has been deposited
-        for (uint256 i = 0; i < tokenAmountA.length; i++) {
-            address pool = registry.tokenToPool(tokenAddress[i]);
+    function testOwnWithdraw() public {
+        uint[3] memory amountA = [uint256(10e18), uint256(20e18), uint256(50e18)];
+        uint total = 0;
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            uint tokens = trsy.getTokenAmount(amountA[i],pools[i]);
             vm.prank(user1);
-            trsy.deposit( tokenAmountA[i],tokenAddress[i]);
+            trsy.deposit(tokens,tokenAddress[i]);
+            emit log_uint(token.totalSupply());
+            emit log_uint(registry.getTotalAUMinUSD());
             vm.prank(user2);
-            trsy.deposit(tokenAmountB[i],tokenAddress[i]);
-        
+            trsy.deposit(tokens,tokenAddress[i]);
+            emit log_uint(token.totalSupply());
+            emit log_uint(registry.getTotalAUMinUSD());
+            emit log_uint(token.balanceOf(user1));
+            emit log_uint(token.balanceOf(user2));
+            total += 2 * amountA[i];
+    }   
+        uint idk = trsy.getTokenAmount(100e18, pools[1]);
+        assertApproxEqRel(100e18, ITokenPool(pools[1]).getDepositValue(idk), 1e6);
+        emit log_uint(registry.getConcentration(pools[0]));
+        emit log_uint(registry.getConcentration(pools[1]));
+        emit log_uint(registry.getConcentration(pools[2]));
 
-            depositUserA[i] = (tokenAmountA[i] * getPriceInUSD(feedAddress[i])) / (10 ** 18);
-            sumDepositA += depositUserA[i];
-            depositUserB[i] = (tokenAmountB[i] * getPriceInUSD(feedAddress[i])) / (10 ** 18);
-            sumDepositB += depositUserB[i];
-            expectPoolAum[i] = depositUserA[i] + depositUserB[i];
-            totalAum += expectPoolAum[i];
-            uint poolAUM = ITokenPool(pool).getPoolValue();
-            assertEq(depositUserA[i] + depositUserB[i], poolAUM );
-            assertEq(expectPoolAum[i], poolAUM);
-        }
-        assertEq(token.balanceOf(user1), sumDepositA);
-        assertEq(token.balanceOf(user2), sumDepositB);
-        assertEq(token.totalSupply(), sumDepositA + sumDepositB);
-        assertEq(totalAum, registry.getTotalAUMinUSD());
-
-        // Approx concentration are 40,12,47
-        conc[0] = registry.PoolToConcentration(registry.tokenPools(0));
-        conc[1] = registry.PoolToConcentration(registry.tokenPools(1));
-        conc[2] = registry.PoolToConcentration(registry.tokenPools(2));
-
-        uint256 liquidityToWithdrawA = sumDepositA / 3;
-        uint256 liquidityToWithdrawB = sumDepositB / 2;
-        uint256 tsryBalanceA = token.balanceOf(user1);
-        uint256 tsryBalanceB = token.balanceOf(user2);
-        uint256 shareA = (PRECISION * liquidityToWithdrawA) / token.totalSupply();
-        uint256 shareB = (PRECISION * liquidityToWithdrawB) / token.totalSupply();
-        uint256 expectedLiquidityA = shareA * totalAum / PRECISION;
-        uint256 expectedLiquidityB = shareB * totalAum / PRECISION;
-
+        assertApproxEqRel(registry.getTotalAUMinUSD(),total,1e18);
+        assertApproxEqRel(token.balanceOf(user1),trsy.getTRSYAmount(800e18),1e18);
+        assertApproxEqRel(token.totalSupply(),total, 1e18);
+        assertEq(registry.getConcentration(pools[0]),125000); //1/8
+        assertEq(registry.getConcentration(pools[1]),250000);
         vm.prank(user1);
-        trsy.withdraw(liquidityToWithdrawA);
+        trsy.withdraw(10e18);
+        
+        emit log_uint(registry.getConcentration(pools[0]));
+        emit log_uint(registry.getConcentration(pools[1]));
+        emit log_uint(registry.getConcentration(pools[2]));
+        assertApproxEqRel(ITokenPool(pools[0]).getPoolValue(), ITokenPool(pools[0]).getDepositValue(2* 100e18),1e18);
+        assertApproxEqRel(ITokenPool(pools[1]).getPoolValue(), ITokenPool(pools[1]).getDepositValue(2* 200e18),1e18);
+        uint wd = token.balanceOf(user2);
         vm.prank(user2);
-        trsy.withdraw(liquidityToWithdrawB);
-
-        uint256 tsryBurnA = tsryBalanceA - token.balanceOf(user1); // Amount burn
-        uint256 tsryBurnB = tsryBalanceB - token.balanceOf(user2); // Amount burn
-
-        assertApproxEqRel(tsryBurnA, expectedLiquidityA, 1e15);
-        assertApproxEqRel(tsryBurnB, expectedLiquidityB, 1e15);
-        assertApproxEqRel(totalAum - (tsryBurnA + tsryBurnB), registry.getTotalAUMinUSD(), 1e15);
-    }
-
-     function getPriceInUSD(address feed) public view returns (uint256) {
-        AggregatorV3Interface priceFeed = AggregatorV3Interface(feed);
-        (, int256 price,,,) = priceFeed.latestRoundData();
-        uint256 decimals = priceFeed.decimals();
-        return (uint256(price) * (10 ** (18 - decimals)));
-    }
-
-//     function testOwnWithdraw() public {
-//         uint[] memory amountA = [uint256(10000e18), uint256(100e17), uint256(300e16];
-//         for (uint256 i = 0; i < tokenAddress.length; i++) {
-//             address pool = registry.tokenToPool(tokenAddress[i]);
-//             vm.prank(user1);
-//             trsy.deposit(,tokenAddress[i]);
-//             vm.prank(user2);
-//             trsy.deposit(tokenAmountB[i],tokenAddress[i]);
-//     }
-// }
+        trsy.withdraw(wd);
+        emit log_uint(registry.getConcentration(pools[0]));
+        emit log_uint(registry.getConcentration(pools[1]));
+        emit log_uint(registry.getConcentration(pools[2]));
+        vm.prank(user1);
+        trsy.withdraw(10e18);
+        emit log_uint(registry.getConcentration(pools[0]));
+        emit log_uint(registry.getConcentration(pools[1]));
+        emit log_uint(registry.getConcentration(pools[2]));
+}
 
 }
+
