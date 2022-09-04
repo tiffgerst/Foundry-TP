@@ -37,7 +37,7 @@ function testDepositWithdraw() public {
             sumDepositB += depositUserB[i];
             expectPoolAum[i] = depositUserA[i] + depositUserB[i];
             totalAum += expectPoolAum[i];
-            (uint poolAUM ,) = ITokenPool(pool).getPoolValue();
+            uint poolAUM = ITokenPool(pool).getPoolValue();
             assertEq(depositUserA[i] + depositUserB[i], poolAUM );
             assertEq(expectPoolAum[i], poolAUM);
         }

@@ -32,9 +32,7 @@ contract TestTreasury is InitState {
         //address pool = registry.tokenToPool(tokenAddress[0]);
         uint price = tokenPools[0].getPrice();
         emit log_uint(price);
-        (uint hi,) = ITokenPool(pools[1]).getPoolValue();
-        //uint hi = (IERC20(tokenAddress[0]).balanceOf(pool) * price) / 10**18;
-        //(uint hi,) = tokenPools[0].getPoolValue();
+        uint hi= ITokenPool(pools[1]).getPoolValue();
         emit log_uint(hi);
     }
 

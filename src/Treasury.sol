@@ -61,7 +61,7 @@ constructor(
         require(whitelistedTokens[_token], "Token is not whitelisted");
         require(_amount > 0, "Amount must be greater than 0");
         address pool = IRegistry(registry).tokenToPool(_token);
-        (uint256 USDValue,) = ITokenPool(pool).getDepositValue(_amount);
+        uint256 USDValue = ITokenPool(pool).getDepositValue(_amount);
         uint256 trsyamt = getTRSYAmount(USDValue);
         bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);
