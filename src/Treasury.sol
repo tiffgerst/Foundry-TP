@@ -59,9 +59,15 @@ constructor(
     function deposit(uint256 _amount, address _token) public {
         require(whitelistedUsers[msg.sender], "User is not whitelisted");
         require(whitelistedTokens[_token], "Token is not whitelisted");
-        require(_amount > 0, "Amount must be greater than 0");
         address pool = IRegistry(registry).tokenToPool(_token);
-        (uint256 USDValue,) = ITokenPool(pool).getDepositValue(_amount);
+        uint256 USDValue = ITokenPool(pool).getDepositValue(_amount);
+        require(USDValue > 1e18, "Amount must be greater than $1");
+        uint aum = Registry(registry).getTotalAUMinUSD();
+        uint currentConcentration = Registry(registry).getConcentration(pool);
+        uint targetConcentration = Registry(registry).PoolToConcentration(pool);
+        uint max = (targetConcentration*1200000)/PRECISION;
+        if (aum>1000e18){
+        require(currentConcentration < max, "Concentration is too high");}
         uint256 trsyamt = getTRSYAmount(USDValue);
         bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);
@@ -71,7 +77,7 @@ constructor(
     function getTRSYAmount(uint256 _amount) public view returns (uint256){
         uint256 tvl = IRegistry(registry).getTotalAUMinUSD();
         uint256 supply = TRSY.totalSupply();
-        return tvl == 0 ? _amount : _amount * (supply / tvl);
+        return tvl == 0 ? _amount : (_amount * supply) / tvl;
     
     }
 
@@ -95,13 +101,10 @@ constructor(
             unchecked{++i;}
         }
         
-        
-    
-
     }
     function getTokenAmount(uint usdamt, address pool) public returns (uint256){
         uint price = ITokenPool(pool).getPrice();
-        return (usdamt * 10**18)/price;
+        return ((usdamt * 10**18)/price);
     }
 
     function getWithdrawAmount(uint256 trsyamt) public view returns(uint256) {

@@ -48,17 +48,14 @@ contract TestZeroState is ZeroState {
             (,int price, , ,) = AggregatorV3Interface(feedAddress[i]).latestRoundData();
             (,int feedprice, , ,) = feedContract[i].latestRoundData();
             assertEq(price, feedprice);
-            assertEq(erc20Contract[i].totalSupply(), 1000000000000000000000);
-            assertEq(
-                erc20Contract[i].balanceOf(deployer), 1000000000000000000000
-            );
-            assertEq(
-                erc20Contract[i].balanceOf(address(1)), 1000000000000000000000
-            );
+            assertEq(erc20Contract[i].totalSupply(), 20000000000000000000000);
+            assertEq(erc20Contract[i].balanceOf(deployer), 20000000000000000000000);
+            
         }
     } 
 
 }
+
 
 contract TestRegistry is ZeroState {
     
@@ -132,7 +129,7 @@ contract TestTreasury is ZeroState {
         vm.assume(amount > 0);
         vm.assume(amount < 1e50);
         for (uint256 i = 0; i < tokenAddress.length; i++) {
-            (uint256 val,) = ITokenPool(pools[i]).getDepositValue(amount);
+            uint256 val = ITokenPool(pools[i]).getDepositValue(amount);
            (,int256 price,,,) = feedContract[i].latestRoundData();
             uint256 decimals = feedContract[i].decimals();
             assertEq(val, amount * (uint256(price) * (10**(18-decimals))) / 10 ** 18);    

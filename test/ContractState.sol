@@ -27,7 +27,7 @@ abstract contract ZeroState is Test {
 
     string[3] public tokenName = ["dai", "aave", "ethereum"];
     address[3] public tokenAddress;
-    address[3] public feedAddress = [0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9, 0x547a514d5e3769680Ce22B2361c10Ea13619e8a9,0xaEA2808407B7319A31A383B6F8B60f04BCa23cE2];
+    address[3] public feedAddress = [0xAed0c38402a5d19df6E4c03F4E2DceD6e29c1ee9, 0x547a514d5e3769680Ce22B2361c10Ea13619e8a9,0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419];
     address[3] public pools;
     uint256[3] public concentration = [500000, 300000, 200000];
     uint256  amountReceived = 10000e18;
@@ -55,7 +55,6 @@ abstract contract ZeroState is Test {
             MockERC20 erc20 = new MockERC20(tokenName[i], tokenName[i]);
             vm.label(address(erc20), tokenName[i]);
             AggregatorV3Interface feed = AggregatorV3Interface(feedAddress[i]);
-            //MockV3Aggregator feed = new MockV3Aggregator(8,"lib/chainlink-MockAggregator/dataRequest.js", tokenName[i]);
             vm.label(address(erc20), string.concat("Feed ", tokenName[i]));
 
             // Create new pools

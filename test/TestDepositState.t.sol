@@ -17,7 +17,7 @@ contract TestTRSY is FirstDepositState {
 // }
 
     function testMint() public {
-        (uint256 usdVal,) = ITokenPool(pools[1]).getDepositValue(amountDeposited);
+        uint256 usdVal = ITokenPool(pools[1]).getDepositValue(amountDeposited);
         assertEq(token.balanceOf(user1), usdVal);
         assertEq(token.totalSupply(), token.balanceOf(user1));
         emit log_uint(token.balanceOf(user1));
@@ -57,51 +57,50 @@ contract TestTRSY is FirstDepositState {
         emit log_uint(trsy.getTokenAmount(419232812450000000000, pools[1]));
     }
     function testWithdraw() public {
-        uint256 tsryToWithdraw = token.balanceOf(user1) / 2; // Widthraw 50 %
+        uint256 tsryToWithdraw = token.balanceOf(user1)/2; // Widthraw 50 %
         address pool = registry.tokenToPool(tokenAddress[1]);
+        emit log_uint(erc20Contract[1].balanceOf(pool));
+        //(,Registry.Rebalancing[] memory w) = registry.liquidityCheck(tsryToWithdraw);
+       //(address[] memory pools, uint[] memory amt) = registry.checkWithdraw(tsryToWithdraw);
         vm.prank(user1);
         trsy.withdraw(tsryToWithdraw);
-        assertEq(token.balanceOf(user1), tsryToWithdraw);
-        assertEq(erc20Contract[1].balanceOf(user1), (amountReceived - amountDeposited) + amountDeposited / 2);
-        assertEq(erc20Contract[1].balanceOf(pool), amountDeposited / 2);
+        assertEq(token.balanceOf(user1),tsryToWithdraw);
+        assertEq(erc20Contract[1].balanceOf(user1), (amountReceived - amountDeposited) + amountDeposited / 2 );
+        assertEq(erc20Contract[1].balanceOf(pool), amountDeposited/2);
         emit log_uint(erc20Contract[1].balanceOf(pool));
-    }
-    
-    // function testFuzzWithdraw(uint256 amount) public {
-    //     amount = bound(amount, 1, token.totalSupply());
-    //     uint256 tsryToWithdraw = amount;
-    //     address pool = registry.tokenToPool(tokenAddress[1]);
-    //     uint256 totalSupply = token.totalSupply();
-    //     uint256 preBal = token.balanceOf(user1);
-    //     uint256 aum = registry.getTotalAUMinUSD();
-    //     (uint256 poolAum,) = ITokenPool(pool).getPoolValue();
-    //     uint256 shareOfThePool = (PRECISION * tsryToWithdraw) / totalSupply;
-    //     uint256 tokenPreBal = erc20Contract[1].balanceOf(user1);
-    //     vm.prank(user1);
-    //     trsy.withdraw(tsryToWithdraw);
+    }  
+    function testFuzzWithdraw(uint256 amount) public {
+        amount = bound(amount, 1, token.totalSupply());
+        uint256 tsryToWithdraw = amount;
+        address pool = registry.tokenToPool(tokenAddress[1]);
+        uint256 totalSupply = token.totalSupply();
+        uint256 preBal = token.balanceOf(user1);
+        uint256 aum = registry.getTotalAUMinUSD();
+        uint256 poolAum = ITokenPool(pool).getPoolValue();
+        uint256 shareOfThePool = (PRECISION * tsryToWithdraw) / totalSupply;
+        uint256 tokenPreBal = erc20Contract[1].balanceOf(user1);
+        vm.prank(user1);
+        trsy.withdraw(tsryToWithdraw);
+         uint256 tsryBurn = preBal - token.balanceOf(user1); // Amount burn
+        uint256 liquidityReceived =
+            ITokenPool(pool).getDepositValue(erc20Contract[1].balanceOf(user1) - tokenPreBal);
+        uint256 expectedLiquidity = shareOfThePool * aum / PRECISION;
 
-    //     uint256 tsryBurn = preBal - token.balanceOf(user1); // Amount burn
-    //     (uint256 liquidityReceived,) =
-    //         ITokenPool(pool).getDepositValue(erc20Contract[1].balanceOf(user1) - tokenPreBal);
-    //     uint256 expectedLiquidity = shareOfThePool * aum / PRECISION;
-    //     (uint hi,)= ITokenPool(pool).getPoolValue();
+        // Case where user have been able to withdraw all the liquidity (enough liquidity in pools)
+        if (tsryBurn == amount) {
+            //assertApproxEqRel(tsryBurn, liquidityReceived, 1e15);
+            assertApproxEqRel(expectedLiquidity, liquidityReceived,1e15);
+            assertApproxEqRel(aum - tsryBurn, registry.getTotalAUMinUSD(),1e15);
+            assertApproxEqRel(poolAum - tsryBurn, ITokenPool(pool).getPoolValue(),1e15);
+        }
+        // Case where not enough liquitiy
+        else {
+            assertApproxEqRel(tsryBurn, liquidityReceived, 1e15); // 0.1 % Tolerance
+            assertApproxEqRel(aum - tsryBurn, registry.getTotalAUMinUSD(), 1e15);
+            assertApproxEqRel(poolAum - tsryBurn, ITokenPool(pool).getPoolValue(), 1e15);
+        }
 
-    //     // Case where user have been able to withdraw all the liquidity (enough liquidity in pools)
-    //     if (tsryBurn == amount) {
-    //         assertEq(tsryBurn, liquidityReceived);
-    //         // assertEq(expectedLiquidity, liquidityReceived);
-    //         // assertEq(aum - tsryBurn, registry.getTotalAUMinUSD());
-    //         // assertEq(poolAum - tsryBurn,hi );
-    //     }
-    //     // Case where not enough liquitiy
-    //     // else {
-    //     //     assertApproxEqRel(tsryBurn, liquidityReceived, 1e15); // 0.1 % Tolerance
-    //     //     assertApproxEqRel(aum - tsryBurn, registry.getTotalAUMinUSD(), 1e15);
-    //     //     assertApproxEqRel(poolAum - tsryBurn, hi, 1e15);
-    //     // }
-    // }
-
-}
+}}
 
 contract TestRegistry is FirstDepositState {
     uint256 public amountDeposited = 10000000000000000000;
@@ -109,67 +108,21 @@ contract TestRegistry is FirstDepositState {
 
     function testgetConcentrationDifference() public {
         uint256 totalAUM = registry.getTotalAUMinUSD();
-        (uint256 poolAUM, uint concentration) = ITokenPool(pools[1]).getPoolValue();
-        int poolConcentrationDiff = registry.getConcentrationDifference(pools[1]);
-        assertEq(poolConcentrationDiff, 700000);
-        assertEq(poolConcentrationDiff, int((((poolAUM/totalAUM))*PRECISION) - concentration));
-        int pcd = registry.getConcentrationDifference(pools[0]);
-        assertEq(0-pcd, 500000);
+        uint256 poolAUM = ITokenPool(pools[1]).getPoolValue();
+        uint concentration = registry.PoolToConcentration(pools[1]);
+        uint poolConcentration = registry.getConcentration(pools[1]);
+        int difference = int(poolConcentration) - int(concentration);
+        assertEq(difference, 700000);
+        assertEq(difference, int((((poolAUM/totalAUM))*PRECISION) - concentration));
+        uint pcd = registry.getConcentration(pools[0]);
+        uint target = registry.PoolToConcentration(pools[0]);
+        int diff = int(pcd) - int(target);
+        assertEq(0-diff, 500000);
     }
 
     function testGetAllPoolAUM() public {
-        (uint price, ) = ITokenPool(pools[1]).getDepositValue(amountDeposited);
+        uint price = ITokenPool(pools[1]).getDepositValue(amountDeposited);
         assertEq(registry.getTotalAUMinUSD(),price );
     } 
-
-
-  
-    
-    
-    
 }
  
-
-
-//     function testPoolData() public {
-//         address pool = router.getRoute(tokenAddress[1]);
-//         PoolLogic.PoolData memory poolData = registry.getPoolData(pool);
-//         assertEq(poolData.poolAddress, pool);
-//         assertEq(poolData.tokenAddress, tokenAddress[1]);
-//         assertEq(poolData.currentConcentration, 1000000);
-//         assertEq(poolData.targetConcentration, concentration[1]);
-//         assertEq(poolData.tokenBalance, amountDeposited);
-//         assertEq(poolData.aumInUSD, getPrice(amountDeposited));
-//     }
-
-//     function testGetPoolAUM() public {
-//         address pool = router.getRoute(tokenAddress[1]);
-//         assertEq(registry.getPoolAUMinUSD(pool), getPrice(amountDeposited));
-
-//         uint256 tsryToWithdraw = router.balanceOf(user1) / 2; // Widthraw 50 %
-//         vm.prank(user1);
-//         router.withdraw(tsryToWithdraw);
-//         assertEq(tsryToWithdraw, registry.getPoolAUMinUSD(pool));
-//     }
-
-//     
-
-//     
-// }
-
-// contract FuzzOracleFirstDeposit is FirstDepositState {
-//     uint256 public amountDeposited = 10000000000000000000;
-
-//     function testFuzzDeposit(uint256 nJump) public {
-//         nJump = bound(nJump, 1, 350);
-//         address pool = router.getRoute(tokenAddress[1]);
-//         for (uint256 i = 0; i < nJump; i++) {
-//             chainlinkFeed[1].updateAnswer();
-//             assertEq(registry.getPoolAUMinUSD(pool), getPrice(amountDeposited));
-//             assertEq(registry.getTotalPoolsAUMinUSD(), getPrice(amountDeposited));
-//         }
-//     }
-
-//     function getPrice(uint256 amount) internal view returns (uint256) {
-//         return (amount * feedContract[1].getPriceInUSD()) / (10 ** chainlinkFeed[1].decimals());
-//     }

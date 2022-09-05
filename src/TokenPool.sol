@@ -26,14 +26,14 @@ function getPrice() public  view returns (uint256){
     return (uint256(price) * (10**(18-decimals)));
 }
 
-function getPoolValue() public view returns(uint256, uint256){
+function getPoolValue() public view returns(uint256){
     uint256 price = getPrice();
-    return ((token.balanceOf(address(this)) * price)/10**decimal, targetconcentration);
+    return ((token.balanceOf(address(this)) * price)/10**decimal);
 }
 
-function getDepositValue(uint256 _amount) external view returns(uint256, uint256){
+function getDepositValue(uint256 _amount) external view returns(uint256){
     uint256 price = getPrice();
-    return ((_amount * price) / (10 ** decimal), targetconcentration);
+    return ((_amount * price) / (10 ** decimal));
 }
 
 function withdrawToken(address receiver, uint256 amount) external  {
