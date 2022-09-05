@@ -119,12 +119,6 @@ contract TestTreasury is ZeroState {
         trsy.deposit(100, address(16));
     }
 
-    function testWithdrawUserNotWhitelisted() public{
-        vm.prank(address(20));
-        vm.expectRevert(bytes("User is not whitelisted"));
-        trsy.withdraw(100);
-    }
-
     function testGetTRSYamount(uint256 amount) public{
         vm.assume(amount > 0);
         vm.assume(amount < 1e50);

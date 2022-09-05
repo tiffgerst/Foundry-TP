@@ -11,17 +11,12 @@ contract TestTRSY is FirstDepositState {
     uint256 public amountDeposited = 10000000000000000000;
     uint256 constant PRECISION = 1e6;
     
-//     struct Rebalancing {
-//     address pool;
-//     uint256 amt;
-// }
-
     function testMint() public {
         uint256 usdVal = ITokenPool(pools[1]).getDepositValue(amountDeposited);
-        assertEq(token.balanceOf(user1), usdVal);
-        assertEq(token.totalSupply(), token.balanceOf(user1));
-        emit log_uint(token.balanceOf(user1));
-    }
+        uint tax = usdVal * 50000 / PRECISION;
+        assertEq(token.balanceOf(user1), usdVal-tax);
+        assertEq(token.totalSupply(), token.balanceOf(user1) + token.balanceOf(address(trsy)));
+        }
 
     function testTransferToken() public {
         address pool = registry.tokenToPool(tokenAddress[1]);
@@ -59,18 +54,20 @@ contract TestTRSY is FirstDepositState {
     function testWithdraw() public {
         uint256 tsryToWithdraw = token.balanceOf(user1)/2; // Widthraw 50 %
         address pool = registry.tokenToPool(tokenAddress[1]);
-        emit log_uint(erc20Contract[1].balanceOf(pool));
-        //(,Registry.Rebalancing[] memory w) = registry.liquidityCheck(tsryToWithdraw);
-       //(address[] memory pools, uint[] memory amt) = registry.checkWithdraw(tsryToWithdraw);
         vm.prank(user1);
         trsy.withdraw(tsryToWithdraw);
         assertEq(token.balanceOf(user1),tsryToWithdraw);
-        assertEq(erc20Contract[1].balanceOf(user1), (amountReceived - amountDeposited) + amountDeposited / 2 );
-        assertEq(erc20Contract[1].balanceOf(pool), amountDeposited/2);
+        uint256 usdVal = ITokenPool(pools[1]).getDepositValue(amountDeposited);
+        uint tax = usdVal * 50000 / PRECISION;
+        uint actual = usdVal - tax;
+        uint amt = trsy.getTokenAmount(actual, pools[1]);
+        assertEq(erc20Contract[1].balanceOf(user1), (amountReceived - amountDeposited) + amt / 2 );
+        emit log_uint(erc20Contract[1].balanceOf(user1));
+        assertEq(erc20Contract[1].balanceOf(pool), amountDeposited-amt/2);
         emit log_uint(erc20Contract[1].balanceOf(pool));
     }  
     function testFuzzWithdraw(uint256 amount) public {
-        amount = bound(amount, 1, token.totalSupply());
+        amount = bound(amount, 1, token.balanceOf(user1));
         uint256 tsryToWithdraw = amount;
         address pool = registry.tokenToPool(tokenAddress[1]);
         uint256 totalSupply = token.totalSupply();

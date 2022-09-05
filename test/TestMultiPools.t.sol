@@ -5,6 +5,7 @@ import {InitState} from "./ContractState.sol";
 import "forge-std/Test.sol";
 import "../src/interfaces/ITokenPool.sol";
 import "../src/interfaces/IRegistry.sol";
+import"../src/Treasury.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 
@@ -26,6 +27,10 @@ contract TestMultiPools is InitState {
         emit log_named_uint("Concentration of Pool 0, pre-withdrawal",registry.getConcentration(pools[0]));
         emit log_named_uint("Concentration of Pool 1, pre-withdrawal",registry.getConcentration(pools[1]));
         emit log_named_uint("Concentration of Pool 2, pre-withdrawal",registry.getConcentration(pools[2]));
+        emit log_named_uint("Tax accrued: $", token.balanceOf(address(trsy))/1e18);
+        emit log_named_uint("Total TRSY supply: $", token.totalSupply()/1e18);
+        emit log_named_uint("User1 TRSY balance: $", token.balanceOf(user1)/1e18);
+        emit log_named_uint("User2 TRSY balance: $", token.balanceOf(user2)/1e18);
 
         assertApproxEqRel(registry.getTotalAUMinUSD(),total,1e18);
         assertApproxEqRel(token.balanceOf(user1),trsy.getTRSYAmount(800e18),1e18);
@@ -50,7 +55,6 @@ contract TestMultiPools is InitState {
         emit log_named_uint("Concentration of Pool 0, post-withdrawal #3",registry.getConcentration(pools[0]));
         emit log_named_uint("Concentration of Pool 1, post-withdrawal #3",registry.getConcentration(pools[1]));
         emit log_named_uint("Concentration of Pool 2, post-withdrawal #3",registry.getConcentration(pools[2]));
-}
-
-}
+        
+    }}
 

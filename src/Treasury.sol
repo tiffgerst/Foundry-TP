@@ -25,6 +25,12 @@ uint256 constant PRECISION = 1e6;
 error Error_Unauthorized();
 error InsufficientBalance(uint256 available, uint256 required);
 
+struct Concentrations{
+        uint256 currentConcentration;
+        uint256 targetConcentration;
+        uint256 newConcentration;
+        uint256 aum;
+    }
 
 modifier onlyOwner() {
         if (msg.sender != owner) {
@@ -56,33 +62,44 @@ constructor(
          whitelistedTokens[_token] =true;
     }
 
+    function makeConcentrationStruct(address pool, uint amount) public view returns (Concentrations memory){
+        Concentrations memory concentration;
+        concentration.currentConcentration = Registry(registry).getConcentration(pool);
+        concentration.targetConcentration = Registry(registry).PoolToConcentration(pool);
+        concentration.newConcentration = Registry(registry).getNewConcentration(pool, amount);
+        concentration.aum = Registry(registry).getTotalAUMinUSD();
+        return concentration;
+    }
     function deposit(uint256 _amount, address _token) public {
         require(whitelistedUsers[msg.sender], "User is not whitelisted");
         require(whitelistedTokens[_token], "Token is not whitelisted");
         address pool = IRegistry(registry).tokenToPool(_token);
         uint256 USDValue = ITokenPool(pool).getDepositValue(_amount);
         require(USDValue > 1e18, "Amount must be greater than $1");
-        uint aum = Registry(registry).getTotalAUMinUSD();
-        uint currentConcentration = Registry(registry).getConcentration(pool);
-        uint targetConcentration = Registry(registry).PoolToConcentration(pool);
-        uint max = (targetConcentration*1200000)/PRECISION;
-        if (aum>1000e18){
-        require(currentConcentration < max, "Concentration is too high");}
+        Concentrations memory c = makeConcentrationStruct(pool,USDValue);
+        if (c.aum>100000e18 && c.aum!=0){
+        require(c.currentConcentration < (c.targetConcentration*1200000)/PRECISION, "Concentration is too high");
+        require(c.newConcentration < (c.targetConcentration * 1300000 / PRECISION));}
+        uint taxamt = USDValue * 50000 / PRECISION;
+        if ((c.newConcentration>c.targetConcentration) && (c.newConcentration >= c.currentConcentration)){
+           uint change =  c.targetConcentration < c.currentConcentration ? USDValue * 75000 / PRECISION : USDValue * (c.newConcentration - c.targetConcentration)/PRECISION * 75000 / PRECISION ;
+           taxamt += change;
+        }
         uint256 trsyamt = getTRSYAmount(USDValue);
+        uint256 trsytaxamt = getTRSYAmount(taxamt);
         bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);
-        TRSY.mint(msg.sender, trsyamt);
-        emit TokenDeposited(msg.sender, _token, _amount, USDValue, trsyamt);
+        TRSY.mint(msg.sender, trsyamt-trsytaxamt);
+        TRSY.mint(address(this), trsytaxamt);
+        emit TokenDeposited(msg.sender, _token, _amount, USDValue, trsyamt-trsytaxamt);
     }
     function getTRSYAmount(uint256 _amount) public view returns (uint256){
         uint256 tvl = IRegistry(registry).getTotalAUMinUSD();
         uint256 supply = TRSY.totalSupply();
         return tvl == 0 ? _amount : (_amount * supply) / tvl;
-    
     }
 
     function withdraw(uint256 _amount) public {
-        require(whitelistedUsers[msg.sender], "User is not whitelisted");
         require(_amount > 0, "Amount must be greater than 0");
         uint256 trsyamt = TRSY.balanceOf(msg.sender);
         if (trsyamt < _amount) {

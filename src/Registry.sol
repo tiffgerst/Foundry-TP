@@ -152,7 +152,13 @@ modifier onlyOwner() {
             uint256 total = getTotalAUMinUSD();
             uint256 poolBalance = ITokenPool(pool).getPoolValue();       
             return total == 0 ? 0 :poolBalance*PRECISION/total;
+        }
+    function getNewConcentration (address pool, uint amount) view public returns (uint){    
+            uint256 total = getTotalAUMinUSD();
+            uint256 poolBalance = ITokenPool(pool).getPoolValue() + amount;       
+            return total == 0 ? 0 :poolBalance*PRECISION/total;
             
         }
+    }
     
-}
+
