@@ -150,9 +150,9 @@ modifier onlyOwner() {
 
     function getConcentration(address pool) view public returns(uint){
             uint256 total = getTotalAUMinUSD();
-            uint256 poolBalance = ITokenPool(pool).getPoolValue();     
-            uint current = poolBalance*PRECISION/total;   
-            return current;
+            uint256 poolBalance = ITokenPool(pool).getPoolValue();       
+            return total == 0 ? 0 :poolBalance*PRECISION/total;
+            
         }
     
 }

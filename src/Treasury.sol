@@ -61,8 +61,13 @@ constructor(
         require(whitelistedTokens[_token], "Token is not whitelisted");
         address pool = IRegistry(registry).tokenToPool(_token);
         uint256 USDValue = ITokenPool(pool).getDepositValue(_amount);
-        require(USDValue > 1e18, "Amount must be greater than 0");
-        
+        require(USDValue > 1e18, "Amount must be greater than $1");
+        uint aum = Registry(registry).getTotalAUMinUSD();
+        uint currentConcentration = Registry(registry).getConcentration(pool);
+        uint targetConcentration = Registry(registry).PoolToConcentration(pool);
+        uint max = (targetConcentration*1200000)/PRECISION;
+        if (aum>1000e18){
+        require(currentConcentration < max, "Concentration is too high");}
         uint256 trsyamt = getTRSYAmount(USDValue);
         bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);

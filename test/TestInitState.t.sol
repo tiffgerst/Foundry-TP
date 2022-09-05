@@ -8,14 +8,14 @@ import "../src/Treasury.sol";
 
 contract TestTreasury is InitState {
     function testCannotDepositZero() public {
-        vm.expectRevert(bytes("Amount must be greater than 0"));
+        vm.expectRevert(bytes("Amount must be greater than $1"));
         vm.startPrank(user1);
         trsy.deposit(0,tokenAddress[0]);
     }
 
     function testCannotWithdrawMoreThanBalance() public {
         vm.startPrank(user1);
-        trsy.deposit(10000000000000,tokenAddress[0]);
+        trsy.deposit(10e18,tokenAddress[0]);
         uint256 tsryBalance = token.balanceOf(user1);
         emit log_uint(tsryBalance);
         vm.expectRevert(abi.encodeWithSelector(Treasury.InsufficientBalance.selector, tsryBalance, tsryBalance * 2));

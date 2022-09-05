@@ -17,21 +17,15 @@ contract TestMultiPools is InitState {
             uint tokens = trsy.getTokenAmount(amountA[i],pools[i]);
             vm.prank(user1);
             trsy.deposit(tokens,tokenAddress[i]);
-            emit log_uint(token.totalSupply());
-            emit log_uint(registry.getTotalAUMinUSD());
             vm.prank(user2);
             trsy.deposit(tokens,tokenAddress[i]);
-            emit log_uint(token.totalSupply());
-            emit log_uint(registry.getTotalAUMinUSD());
-            emit log_uint(token.balanceOf(user1));
-            emit log_uint(token.balanceOf(user2));
             total += 2 * amountA[i];
     }   
         uint idk = trsy.getTokenAmount(100e18, pools[1]);
         assertApproxEqRel(100e18, ITokenPool(pools[1]).getDepositValue(idk), 1e6);
-        emit log_uint(registry.getConcentration(pools[0]));
-        emit log_uint(registry.getConcentration(pools[1]));
-        emit log_uint(registry.getConcentration(pools[2]));
+        emit log_named_uint("Concentration of Pool 0, pre-withdrawal",registry.getConcentration(pools[0]));
+        emit log_named_uint("Concentration of Pool 1, pre-withdrawal",registry.getConcentration(pools[1]));
+        emit log_named_uint("Concentration of Pool 2, pre-withdrawal",registry.getConcentration(pools[2]));
 
         assertApproxEqRel(registry.getTotalAUMinUSD(),total,1e18);
         assertApproxEqRel(token.balanceOf(user1),trsy.getTRSYAmount(800e18),1e18);
@@ -40,23 +34,22 @@ contract TestMultiPools is InitState {
         assertEq(registry.getConcentration(pools[1]),250000);
         vm.prank(user1);
         trsy.withdraw(10e18);
-        
-        emit log_uint(registry.getConcentration(pools[0]));
-        emit log_uint(registry.getConcentration(pools[1]));
-        emit log_uint(registry.getConcentration(pools[2]));
+        emit log_named_uint("Concentration of Pool 0, post-withdrawal #1",registry.getConcentration(pools[0]));
+        emit log_named_uint("Concentration of Pool 1, post-withdrawal #1",registry.getConcentration(pools[1]));
+        emit log_named_uint("Concentration of Pool 2, post-withdrawal #1",registry.getConcentration(pools[2]));
         assertApproxEqRel(ITokenPool(pools[0]).getPoolValue(), ITokenPool(pools[0]).getDepositValue(2* 100e18),1e18);
         assertApproxEqRel(ITokenPool(pools[1]).getPoolValue(), ITokenPool(pools[1]).getDepositValue(2* 200e18),1e18);
         uint wd = token.balanceOf(user2);
         vm.prank(user2);
         trsy.withdraw(wd);
-        emit log_uint(registry.getConcentration(pools[0]));
-        emit log_uint(registry.getConcentration(pools[1]));
-        emit log_uint(registry.getConcentration(pools[2]));
+        emit log_named_uint("Concentration of Pool 0, post-withdrawal #2",registry.getConcentration(pools[0]));
+        emit log_named_uint("Concentration of Pool 1, post-withdrawal #2",registry.getConcentration(pools[1]));
+        emit log_named_uint("Concentration of Pool 2, post-withdrawal #2",registry.getConcentration(pools[2]));
         vm.prank(user1);
-        trsy.withdraw(10e18);
-        emit log_uint(registry.getConcentration(pools[0]));
-        emit log_uint(registry.getConcentration(pools[1]));
-        emit log_uint(registry.getConcentration(pools[2]));
+        trsy.withdraw(60e18);
+        emit log_named_uint("Concentration of Pool 0, post-withdrawal #3",registry.getConcentration(pools[0]));
+        emit log_named_uint("Concentration of Pool 1, post-withdrawal #3",registry.getConcentration(pools[1]));
+        emit log_named_uint("Concentration of Pool 2, post-withdrawal #3",registry.getConcentration(pools[2]));
 }
 
 }
