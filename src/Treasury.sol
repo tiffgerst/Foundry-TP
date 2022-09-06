@@ -15,6 +15,7 @@ contract Treasury {
 
 // State Variables
 TRSYERC20 public immutable TRSY;
+mapping (address => uint256) public timestamp;
 mapping (address => bool) public whitelistedUsers;
 mapping (address => bool) public whitelistedTokens;
 address public owner;
@@ -25,6 +26,13 @@ uint256 constant PRECISION = 1e6;
 error Error_Unauthorized();
 error InsufficientBalance(uint256 available, uint256 required);
 
+//enum
+enum INCENTIVE{
+        OPEN,
+        CLOSED
+    }
+INCENTIVE public incentive;
+//struct
 struct Concentrations{
         uint256 currentConcentration;
         uint256 targetConcentration;
@@ -89,9 +97,16 @@ constructor(
         uint256 trsytaxamt = getTRSYAmount(taxamt);
         bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);
+        timestamp[msg.sender] = block.timestamp;
         TRSY.mint(msg.sender, trsyamt-trsytaxamt);
         TRSY.mint(address(this), trsytaxamt);
         emit TokenDeposited(msg.sender, _token, _amount, USDValue, trsyamt-trsytaxamt);
+        if (Registry(registry).checkDeposit()){
+            incentive == INCENTIVE.OPEN;
+        }
+        else{
+            incentive == INCENTIVE.CLOSED;
+        }
     }
     function getTRSYAmount(uint256 _amount) public view returns (uint256){
         uint256 tvl = IRegistry(registry).getTotalAUMinUSD();
@@ -105,9 +120,12 @@ constructor(
         if (trsyamt < _amount) {
             revert InsufficientBalance({available: trsyamt, required: _amount});
         }
-        uint256 usdamt = getWithdrawAmount(_amount);
+        uint tax = calculateTax(_amount, msg.sender);
+        uint postTax = _amount -tax;
+        uint256 usdamt = getWithdrawAmount(postTax);
         (address[] memory pools, uint256[] memory amt) = IRegistry(registry).tokensToWithdraw(usdamt);
         TRSY.burn(msg.sender, _amount);
+        TRSY.mint(address(this), tax);
         uint len = pools.length;
         for (uint i; i<len;){
             if( pools[i]!= address(0)){
@@ -117,8 +135,32 @@ constructor(
             }
             unchecked{++i;}
         }
-        
+        if (Registry(registry).checkDeposit()){
+            incentive == INCENTIVE.OPEN;
+        }
+        else{
+            incentive == INCENTIVE.CLOSED;
+        }
     }
+    function calculateTax(uint256 _amount, address sender) public view returns (uint256){
+        uint256 tax = _amount * 50000 / PRECISION;
+        uint time = block.timestamp - timestamp[sender];
+        int numdays = int(time / 86400);
+        if(numdays <= 30){
+             int calcTax =  ((200000 * numdays / 30) - 200000);
+             int taxamt = 0 - calcTax;
+             tax += _amount * uint(taxamt) / PRECISION;
+        }
+             return tax;
+        }
+        //(uint today, uint mean, uint std) = volatilityCheck();
+        
+    // function volatilityCheck () public view returns (uint, uint, uint){
+    //     uint today = 0;
+    //     uint mean = 0;
+    //     uint std = 0;
+    //     return (today, mean, std);
+    // }
     function getTokenAmount(uint usdamt, address pool) public returns (uint256){
         uint price = ITokenPool(pool).getPrice();
         return ((usdamt * 10**18)/price);
@@ -130,10 +172,23 @@ constructor(
         uint256 usdAmount = (tvl * trsy) / PRECISION;
         return usdAmount;
     }
+    // function incentivize() public view{
+    //     require(incentive==INCENTIVE.OPEN, "There is no incentive at the moment");
+    //     uint256 trsyamt = TRSY.balanceOf(address(this));
+    //     uint usdTrsy = getWithdrawAmount(trsyamt);
+    //     uint max = usdTrsy * PRECISION/50000;
+        
+        
+    //     // (Registry.Rebalancing [] memory rebalancing, uint total) = Registry(registry).checkDeposit();
+    //     // uint len = rebalancing.length;
+    //     // if ((total * 500000 / PRECISION) >= getWithdrawAmount(trsyamt)){
 
-    function getPoolsToDepositInto() public{
-
-    }
+    //     // }
+    //     // for (uint i; i<len;){
+            
+    //     //     unchecked{++i;}
+    //     // }
+    // }
 
 
 }
