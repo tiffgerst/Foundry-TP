@@ -14,6 +14,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 // ZeroState represent the initial state of the deployment where all the contracts are deployed.
 abstract contract ZeroState is Test {
+    
     Registry public registry;
     TokenPoolFactory public factory;
     Treasury public trsy;
@@ -33,6 +34,7 @@ abstract contract ZeroState is Test {
     uint256  amountReceived = 10000e18;
 
     function setUp() public virtual {
+        vm.rollFork(block.number - 300000);
         vm.label(deployer, "Deployer");
         vm.startPrank(deployer);
 

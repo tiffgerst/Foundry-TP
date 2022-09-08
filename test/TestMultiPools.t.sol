@@ -56,5 +56,42 @@ contract TestMultiPools is InitState {
         emit log_named_uint("Concentration of Pool 1, post-withdrawal #3",registry.getConcentration(pools[1]));
         emit log_named_uint("Concentration of Pool 2, post-withdrawal #3",registry.getConcentration(pools[2]));
         
-    }}
+    }
+    function testTax() public {
+        vm.prank(user1);
+        trsy.deposit(200e18,tokenAddress[1]);
+        vm.rollFork(block.number + 7000);
+        vm.prank(user1);
+        trsy.withdraw(100e18);
+        uint tax = trsy.calculateTax(100e18, user1);
+        assertApproxEqRel(tax, 2.43e19, 1e18);
+        // block.timestamp -  trsy.timestamp(user1) = 93088
+        // 93088 / 86400 = 1.08 days
+        //100 * 0.05 + abs((1.08 * 200000 /30) + 200000) * 100 / 1e6
+        //5e18 + 192,817.2839506173 * 100e18 / 1e6
+        //5e18 + 1.93e19 = 2.43 e19
+    }   
+
+    function testFuzzTax(uint256 forkroll) public{
+        vm.assume(forkroll<300000);
+        vm.prank(user1);
+        trsy.deposit(200e18,tokenAddress[1]);
+        vm.rollFork(block.number + forkroll);
+        vm.prank(user1);
+        trsy.withdraw(100e18);
+        uint time = block.timestamp - trsy.timestamp(user1);
+        int numdays = int(time / 86400);
+        uint tax = trsy.calculateTax(100e18, user1);
+        if (numdays > 30) {
+            assertEq(tax, 100e18 * 50000/PRECISION);
+        }
+        else {
+            int percent =  0 - (numdays * 200000 / 30 - 200000);
+            uint calc = 100e18 * 50000 / PRECISION + 100e18 * uint(percent) / PRECISION;
+            assertApproxEqRel(tax, calc, 1e18);
+        }
+    }
+    }
+    
+    
 

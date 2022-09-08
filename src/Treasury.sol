@@ -105,8 +105,7 @@ constructor(
         require(USDValue > 1e18, "Amount must be greater than $1");
         Concentrations memory c = makeConcentrationStruct(pool,USDValue);
         if (c.aum>100000e18 && c.aum!=0){
-        require(c.currentConcentration < (c.targetConcentration*1200000)/PRECISION, "Concentration is too high"); //concentration is too high to deposit into pool
-        require(c.newConcentration < (c.targetConcentration * 1300000 / PRECISION));} //deposit would make concentration too high
+        require(c.currentConcentration < (c.targetConcentration*1200000)/PRECISION, "Concentration is too high"); }//concentration is too high to deposit into pool
         uint taxamt = USDValue * 50000 / PRECISION; // tax user 5%
         //if users deposit makes concentration too high, tax them an addition 7.5% per dollar that is over the target concentration
         if ((c.newConcentration>c.targetConcentration) && (c.newConcentration >= c.currentConcentration)){
@@ -122,12 +121,12 @@ constructor(
         TRSY.mint(address(this), trsytaxamt); //give this contract the tax 
         emit TokenDeposited(msg.sender, _token, _amount, USDValue, trsyamt-trsytaxamt);
         if (Registry(registry).checkDeposit()){
-            incentive == INCENTIVE.OPEN;
+            incentive = INCENTIVE.OPEN;
             //if pools too unbalanced open the incentive
         }
         else{
             //if pools have been balanced, close the incentive
-            incentive == INCENTIVE.CLOSED;
+            incentive = INCENTIVE.CLOSED;
         }
     }
 
@@ -167,12 +166,12 @@ constructor(
             unchecked{++i;}
         }
         if (Registry(registry).checkDeposit()){
-            incentive == INCENTIVE.OPEN;
+            incentive = INCENTIVE.OPEN;
             //if pools too unbalanced open the incentive
         }
         else{
             //if pools have been balanced, close the incentive
-            incentive == INCENTIVE.CLOSED;
+            incentive = INCENTIVE.CLOSED;
         }
     }
     /**
@@ -220,24 +219,55 @@ constructor(
         uint256 usdAmount = (tvl * trsy) / PRECISION;
         return usdAmount;
     }
-    
-    // function incentivize() public view{
-    //     require(incentive==INCENTIVE.OPEN, "There is no incentive at the moment");
-    //     uint256 trsyamt = TRSY.balanceOf(address(this));
-    //     uint usdTrsy = getWithdrawAmount(trsyamt);
-    //     uint max = usdTrsy * PRECISION/50000;
-        
-        
-    //     // (Registry.Rebalancing [] memory rebalancing, uint total) = Registry(registry).checkDeposit();
-    //     // uint len = rebalancing.length;
-    //     // if ((total * 500000 / PRECISION) >= getWithdrawAmount(trsyamt)){
 
-    //     // }
-    //     // for (uint i; i<len;){
+    function incentivize() public view{
+        require(incentive==INCENTIVE.OPEN, "There is no incentive at the moment");
+        uint256 trsyamt = TRSY.balanceOf(address(this));
+        uint usdTrsy = getWithdrawAmount(trsyamt);
+        uint max = usdTrsy * PRECISION/50000;
+        
+        
+        // (Registry.Rebalancing [] memory rebalancing, uint total) = Registry(registry).checkDeposit();
+        // uint len = rebalancing.length;
+        // if ((total * 500000 / PRECISION) >= getWithdrawAmount(trsyamt)){
+
+        // }
+        // for (uint i; i<len;){
             
-    //     //     unchecked{++i;}
-    //     // }
-    // }
+        //     unchecked{++i;}
+        // }
+    }
 
+    function depositIncentive(uint256 _amount, address _token) public {
+        require(incentive == INCENTIVE.OPEN,"There is no incentive at the moment");
+        require(whitelistedTokens[_token], "Token is not whitelisted");
+        address pool = IRegistry(registry).tokenToPool(_token);
+        uint256 USDValue = ITokenPool(pool).getDepositValue(_amount);
+        require(USDValue > 1e18, "Amount must be greater than $1");
+        Concentrations memory c = makeConcentrationStruct(pool,USDValue);
+        require(c.currentConcentration<c.targetConcentration, "Pool is already above target concentration");
+        require(c.newConcentration < (c.targetConcentration * 1300000 / PRECISION), "This will make the pool too concentrated");
+        uint reward = calculateReward(_amount, _token, c.newConcentration, c.currentConcentration, c.targetConcentration);
+        uint256 trsyamt = getTRSYAmount(USDValue);
+        bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
+        require(success);
+        timestamp[msg.sender] = block.timestamp;
+        TRSY.mint(msg.sender, trsyamt);
+        TRSY.transfer(msg.sender, reward);
+        if (!Registry(registry).checkDeposit()){
+            incentive = INCENTIVE.CLOSED;
+        }
+    }
+
+    function calculateReward(uint256 _amount, address _token, uint256 newC, uint256 current, uint256 target) internal view returns (uint256){
+        require(incentive == INCENTIVE.OPEN, "There is no incentive at the moment");
+        uint256 trsyamt = TRSY.balanceOf(address(this));
+        uint usdTrsy = getWithdrawAmount(trsyamt);
+        uint max = usdTrsy * PRECISION/50000;
+        uint256 USDValue = ITokenPool(_token).getDepositValue(_amount);
+        uint256 trsyUSD = getTRSYAmount(USDValue);
+        uint256 reward = (max * trsyamt) / TRSY.totalSupply();
+        return reward;
+    }
 
 }
