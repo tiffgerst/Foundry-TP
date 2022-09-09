@@ -208,15 +208,36 @@ Checks total amount to be withdraw, finds pools with greatest concentration disp
             address pool = tokenPools[i];
             uint currentConcentration = getConcentration(pool);
             int diff = int(currentConcentration) - int(PoolToConcentration[pool]);
-            if (diff>500000 ){
-                return (true);
+            uint absdiff = abs(diff);
+            if (absdiff>500000) {
+                uint rebalance = calcDeposit();
+                return (true, rebalance);
             }
             unchecked{++i;}
         }
-        return false;
+        return (false,0);
+    }
+    function abs (int256 x) public pure returns (uint){
+        if (x<0){
+            x = 0 - x;
+            return uint(x);
+        }
+        else{
+            return uint(x);
+        }
     }
     
-    // function checkDeposit() public returns (Rebalancing[] memory, uint){
+    function calcDeposit() public returns (uint){
+        uint total = 0;
+        for (uint i = 0; i < len;) {
+            address pool = tokenPools[i];
+            uint currentConcentration = getConcentration(pool);
+            int diff = int(currentConcentration) - int(PoolToConcentration[pool]);
+            if (diff < 0){
+            total += absdiff;}
+            unchecked {++i;}
+    } return total;}
+
     //     uint len = tokenPools.length;
     //     Rebalancing[] memory deposit = new Rebalancing[](len);
     //     uint aum = getTotalAUMinUSD();

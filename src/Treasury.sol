@@ -20,6 +20,7 @@ mapping (address => bool) public whitelistedTokens;
 address public owner;
 address public registry;
 uint256 constant PRECISION = 1e6;
+uint256 public totalIncentive = 0;
 
 //Errors
 error Error_Unauthorized();
@@ -120,14 +121,6 @@ constructor(
         TRSY.mint(msg.sender, trsyamt-trsytaxamt);
         TRSY.mint(address(this), trsytaxamt); //give this contract the tax 
         emit TokenDeposited(msg.sender, _token, _amount, USDValue, trsyamt-trsytaxamt);
-        if (Registry(registry).checkDeposit()){
-            incentive = INCENTIVE.OPEN;
-            //if pools too unbalanced open the incentive
-        }
-        else{
-            //if pools have been balanced, close the incentive
-            incentive = INCENTIVE.CLOSED;
-        }
     }
 
     /**
@@ -164,14 +157,6 @@ constructor(
             ITokenPool(pool).withdrawToken(msg.sender,amount);
             }
             unchecked{++i;}
-        }
-        if (Registry(registry).checkDeposit()){
-            incentive = INCENTIVE.OPEN;
-            //if pools too unbalanced open the incentive
-        }
-        else{
-            //if pools have been balanced, close the incentive
-            incentive = INCENTIVE.CLOSED;
         }
     }
     /**
@@ -221,6 +206,9 @@ constructor(
     }
 
     function incentivize() public view{
+         if (Registry(registry).checkDeposit()){
+            incentive = INCENTIVE.OPEN;
+         }
         require(incentive==INCENTIVE.OPEN, "There is no incentive at the moment");
         uint256 trsyamt = TRSY.balanceOf(address(this));
         uint usdTrsy = getWithdrawAmount(trsyamt);
@@ -251,6 +239,7 @@ constructor(
         uint256 trsyamt = getTRSYAmount(USDValue);
         bool success = IERC20(_token).transferFrom(msg.sender, pool, _amount);
         require(success);
+        totalIncentive += reward;
         timestamp[msg.sender] = block.timestamp;
         TRSY.mint(msg.sender, trsyamt);
         TRSY.transfer(msg.sender, reward);
