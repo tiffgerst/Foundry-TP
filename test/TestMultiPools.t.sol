@@ -27,10 +27,10 @@ contract TestMultiPools is InitState {
         emit log_named_uint("Concentration of Pool 0, pre-withdrawal",registry.getConcentration(pools[0]));
         emit log_named_uint("Concentration of Pool 1, pre-withdrawal",registry.getConcentration(pools[1]));
         emit log_named_uint("Concentration of Pool 2, pre-withdrawal",registry.getConcentration(pools[2]));
-        emit log_named_uint("Tax accrued: $", token.balanceOf(address(trsy))/1e18);
-        emit log_named_uint("Total TRSY supply: $", token.totalSupply()/1e18);
-        emit log_named_uint("User1 TRSY balance: $", token.balanceOf(user1)/1e18);
-        emit log_named_uint("User2 TRSY balance: $", token.balanceOf(user2)/1e18);
+        emit log_named_uint("Tax accrued: $", token.balanceOf(address(trsy)));
+        emit log_named_uint("Total TRSY supply: $", token.totalSupply());
+        emit log_named_uint("User1 TRSY balance: $", token.balanceOf(user1));
+        emit log_named_uint("User2 TRSY balance: $", token.balanceOf(user2));
 
         assertApproxEqRel(registry.getTotalAUMinUSD(),total,1e18);
         assertApproxEqRel(token.balanceOf(user1),trsy.getTRSYAmount(800e18),1e18);
@@ -39,6 +39,7 @@ contract TestMultiPools is InitState {
         assertEq(registry.getConcentration(pools[1]),250000);
         vm.prank(user1);
         trsy.withdraw(10e18);
+
         emit log_named_uint("Concentration of Pool 0, post-withdrawal #1",registry.getConcentration(pools[0]));
         emit log_named_uint("Concentration of Pool 1, post-withdrawal #1",registry.getConcentration(pools[1]));
         emit log_named_uint("Concentration of Pool 2, post-withdrawal #1",registry.getConcentration(pools[2]));
@@ -51,13 +52,14 @@ contract TestMultiPools is InitState {
         emit log_named_uint("Concentration of Pool 1, post-withdrawal #2",registry.getConcentration(pools[1]));
         emit log_named_uint("Concentration of Pool 2, post-withdrawal #2",registry.getConcentration(pools[2]));
         vm.prank(user1);
-        trsy.withdraw(60e18);
+        trsy.withdraw(65e18);
         emit log_named_uint("Concentration of Pool 0, post-withdrawal #3",registry.getConcentration(pools[0]));
         emit log_named_uint("Concentration of Pool 1, post-withdrawal #3",registry.getConcentration(pools[1]));
         emit log_named_uint("Concentration of Pool 2, post-withdrawal #3",registry.getConcentration(pools[2]));
         
     }
     function testTax() public {
+        vm.rollFork(block.number - 300000);
         vm.prank(user1);
         trsy.deposit(200e18,tokenAddress[1]);
         vm.rollFork(block.number + 7000);
@@ -73,6 +75,7 @@ contract TestMultiPools is InitState {
     }   
 
     function testFuzzTax(uint256 forkroll) public{
+        vm.rollFork(block.number - 300000);
         vm.assume(forkroll<300000);
         vm.prank(user1);
         trsy.deposit(200e18,tokenAddress[1]);

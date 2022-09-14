@@ -194,28 +194,28 @@ Checks total amount to be withdraw, finds pools with greatest concentration disp
 @param amount - amount to be added to pool
  */
     function getNewConcentration (address pool, uint amount) view public returns (uint){    
-            uint256 total = getTotalAUMinUSD();
+            uint256 total = getTotalAUMinUSD() + amount;
             uint256 poolBalance = ITokenPool(pool).getPoolValue() + amount;       
-            return total == 0 ? 0 :poolBalance*PRECISION/total;
+            return total == 0 ? 0 : poolBalance*PRECISION/total;
             
         }
 /**
-@dev checks if any pool has a concentration more than 5% above/below target concentration
+@dev checks if any pool has a concentration more than "percent" % above/below target concentration
+@param percent - percent above/below target concentration 
  */
-    function checkDeposit() public view returns (bool){
+    function checkDeposit(uint percent) public view returns (bool){
         uint len = tokenPools.length;
         for (uint i = 0; i < len;) {
             address pool = tokenPools[i];
             uint currentConcentration = getConcentration(pool);
             int diff = int(currentConcentration) - int(PoolToConcentration[pool]);
             uint absdiff = abs(diff);
-            if (absdiff>500000) {
-                uint rebalance = calcDeposit();
-                return (true, rebalance);
+            if (absdiff>percent) {
+                return (true);
             }
             unchecked{++i;}
         }
-        return (false,0);
+        return (false);
     }
     function abs (int256 x) public pure returns (uint){
         if (x<0){
@@ -227,40 +227,17 @@ Checks total amount to be withdraw, finds pools with greatest concentration disp
         }
     }
     
-    function calcDeposit() public returns (uint){
+    function calcDeposit() public view returns (uint){
         uint total = 0;
+        uint len = tokenPools.length;
         for (uint i = 0; i < len;) {
             address pool = tokenPools[i];
             uint currentConcentration = getConcentration(pool);
             int diff = int(currentConcentration) - int(PoolToConcentration[pool]);
-            if (diff < 0){
-            total += absdiff;}
+            uint absdiff = abs(diff);
+            total += absdiff;
             unchecked {++i;}
     } return total;}
-
-    //     uint len = tokenPools.length;
-    //     Rebalancing[] memory deposit = new Rebalancing[](len);
-    //     uint aum = getTotalAUMinUSD();
-    //     uint total = 0;
-    //     bool severe; 
-    //     for (uint i = 0; i < len;) {
-    //         address pool = tokenPools[i];
-    //         uint256 poolBalance = ITokenPool(pool).getPoolValue();
-    //         uint256 target = PoolToConcentration[pool];
-    //         uint256 poolTarget = aum*target/PRECISION;
-    //         if(poolBalance < poolTarget){
-    //             uint256 amt = poolBalance - poolTarget;
-    //             deposit[i]=(Rebalancing({pool: pool, amt: amt}));
-    //             total += amt;
-    //         }
-    //         else{
-    //             deposit[i]=(Rebalancing({pool: pool, amt: 0}));
-    //         }
-    //         unchecked{++i;}
-    //     }
-    //     return (deposit,total);
-        
-    // }
 
     }
     

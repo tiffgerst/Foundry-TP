@@ -48,8 +48,8 @@ contract TestZeroState is ZeroState {
             (,int price, , ,) = AggregatorV3Interface(feedAddress[i]).latestRoundData();
             (,int feedprice, , ,) = feedContract[i].latestRoundData();
             assertEq(price, feedprice);
-            assertEq(erc20Contract[i].totalSupply(), 20000000000000000000000);
-            assertEq(erc20Contract[i].balanceOf(deployer), 20000000000000000000000);
+            assertEq(erc20Contract[i].totalSupply(), 100000e18);
+            assertEq(erc20Contract[i].balanceOf(deployer), 100000e18);
             
         }
     } 

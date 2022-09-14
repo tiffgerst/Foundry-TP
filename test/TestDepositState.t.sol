@@ -14,7 +14,8 @@ contract TestTRSY is FirstDepositState {
     function testMint() public {
         uint256 usdVal = ITokenPool(pools[1]).getDepositValue(amountDeposited);
         uint tax = usdVal * 50000 / PRECISION;
-        assertEq(token.balanceOf(user1), usdVal-tax);
+        uint trsyamt = trsy.getTRSYAmount(usdVal-tax);
+        assertEq(token.balanceOf(user1), trsyamt);
         assertEq(token.totalSupply(), token.balanceOf(user1) + token.balanceOf(address(trsy)));
         }
 

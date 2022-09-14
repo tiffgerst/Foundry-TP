@@ -34,7 +34,7 @@ abstract contract ZeroState is Test {
     uint256  amountReceived = 10000e18;
 
     function setUp() public virtual {
-        vm.rollFork(block.number - 300000);
+        
         vm.label(deployer, "Deployer");
         vm.startPrank(deployer);
 
@@ -83,6 +83,8 @@ abstract contract ZeroState is Test {
 abstract contract InitState is ZeroState {
     address user1 = vm.addr(2);
     address user2 = vm.addr(3);
+    address user3 = vm.addr(5);
+    address user4 = vm.addr(6);
 
     ERC20 erc;
 
@@ -100,11 +102,17 @@ abstract contract InitState is ZeroState {
             erc = ERC20(tokenAddress[i]);
             erc.transfer(user1, amountReceived);
             erc.transfer(user2, amountReceived);
+            erc.transfer(user3, amountReceived);
+            erc.transfer(user4, amountReceived);
             trsy.whitelistToken(tokenAddress[i]);
             vm.stopPrank();
             vm.prank(user1);
             erc.approve(address(trsy), amountReceived);
             vm.prank(user2);
+            erc.approve(address(trsy), amountReceived);
+            vm.prank(user3);
+            erc.approve(address(trsy), amountReceived);
+            vm.prank(user4);
             erc.approve(address(trsy), amountReceived);
             unchecked {
                 i++;
@@ -120,5 +128,27 @@ abstract contract FirstDepositState is InitState {
         vm.startPrank(user1);
         trsy.deposit(10000000000000000000, tokenAddress[1]);
         vm.stopPrank();
+    }
+}
+
+abstract contract FinalState is InitState {
+    
+    function setUp() public override {
+        vm.rollFork(block.number - 30 days);
+        super.setUp();
+        uint[3] memory amountA = [uint256(1000e18), uint256(2000e18), uint256(5000e18)];
+        uint[3] memory amountB = [uint256(6000e18), uint256(10000e18), uint256(3000e18)];
+
+        uint total = 0;
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
+            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
+            vm.prank(user1);
+            trsy.deposit(tokensA,tokenAddress[i]);
+            vm.prank(user2);
+            trsy.deposit(tokensB,tokenAddress[i]);
+            total += 2 * amountA[i];
+           
+    }   
     }
 }
