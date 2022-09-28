@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: UNLICENSED
 pragma solidity ^0.8.12;
 
-import {InitState} from "./ContractState.sol";
+import {IncentiveState} from "./ContractState.sol";
 import "forge-std/Test.sol";
 import "../src/interfaces/ITokenPool.sol";
 import "../src/interfaces/IRegistry.sol";
@@ -9,32 +9,18 @@ import"../src/Treasury.sol";
 import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 
-contract TestIncentive is InitState {
+contract TestIncentive is IncentiveState {
     uint256 constant PRECISION = 1e6;
 
 
     function testIncentivePerfectHit() public {
         token.mint(address(trsy),100e18);
-        uint[3] memory amountA = [uint256(100e18), uint256(200e18), uint256(100e18)];
-        uint[3] memory amountB = [uint256(100e18), uint256(300e18), uint256(200e18)];
-        uint total = 0;
-        assertEq(trsy.getIncentiveStatus(),1);
-        for (uint256 i = 0; i < tokenAddress.length; i++) {
-            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
-            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
-            vm.prank(user1);
-            trsy.deposit(tokensA,tokenAddress[i]);
-            vm.prank(user2);
-            trsy.deposit(tokensB,tokenAddress[i]);
-            total += amountA[i]+amountB[i];
-    }   
     assertEq(trsy.getIncentiveStatus(),0);
     uint x = trsy.getTokenAmount(100e18, pools[1]);
     uint y = trsy.getTokenAmount(100e18, pools[2]);
     uint z = trsy.getTokenAmount(800e18, pools[0]);
 
     uint balanceA = token.balanceOf(user1);
-    uint balanceB = token.balanceOf(user2);
     vm.prank(user1);
     trsy.depositIncentive(z, tokenAddress[0]);
     uint rewardA = trsy.getTRSYAmount((800e18+800e18*50000/PRECISION));
@@ -43,9 +29,9 @@ contract TestIncentive is InitState {
     emit log_named_uint("Target: 30%, Concentration pool aave:", registry.getConcentration(pools[1]));
     emit log_named_uint("Target: 50%, Concentration pool dai:", registry.getConcentration(pools[0]));
     uint rewardB = trsy.getTRSYAmount((100e18+100e18*50000/PRECISION));
-    vm.prank(user2);
+    vm.prank(user3);
     trsy.depositIncentive(x, tokenAddress[1]);
-    assertApproxEqRel(balanceB+rewardB, token.balanceOf(user2),1e5);
+    assertApproxEqRel(rewardB, token.balanceOf(user3),1e5);
     emit log_named_uint("Target: 20%, Concentration pool eth:", registry.getConcentration(pools[2]));
     emit log_named_uint("Target: 30%, Concentration pool aave:", registry.getConcentration(pools[1]));
     emit log_named_uint("Target: 50%, Concentration pool dai:", registry.getConcentration(pools[0]));
@@ -59,24 +45,11 @@ contract TestIncentive is InitState {
     assertEq(trsy.getIncentiveStatus(),1);
     assertApproxEqRel(balanceA+rewardA+rewardB + (postBal - onlyreward)/2, token.balanceOf(user1),1e5);
 
-    assertApproxEqRel(balanceB+rewardB+(postBal - onlyreward)/2, token.balanceOf(user2),1e5);
+    assertApproxEqRel(rewardB+(postBal - onlyreward)/2, token.balanceOf(user3),1e5);
     }
     
-    function testIncentiveTimeElapse() public{
-        vm.rollFork(block.number - 3 hours);
-        uint[3] memory amountA = [uint256(100e18), uint256(200e18), uint256(100e18)];
-        uint[3] memory amountB = [uint256(100e18), uint256(300e18), uint256(200e18)];
-        uint total = 0;
-        assertEq(trsy.getIncentiveStatus(),1);
-        for (uint256 i = 0; i < tokenAddress.length; i++) {
-            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
-            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
-            vm.prank(user1);
-            trsy.deposit(tokensA,tokenAddress[i]);
-            vm.prank(user2);
-            trsy.deposit(tokensB,tokenAddress[i]);
-            total += amountA[i]+amountB[i];
-    }   
+    function testIncentiveTimeElapse() public{ 
+        
     emit log_named_uint("Target: 20%, Concentration pool eth pre deposit:", registry.getConcentration(pools[2]));
     emit log_named_uint("Target: 30%, Concentration pool aave pre deposit:", registry.getConcentration(pools[1]));
     emit log_named_uint("Target: 50%, Concentration pool dai pre deposit:", registry.getConcentration(pools[0]));
@@ -103,19 +76,6 @@ contract TestIncentive is InitState {
     }
 
     function testIncentiveError () public{
-        uint[3] memory amountA = [uint256(100e18), uint256(200e18), uint256(100e18)];
-        uint[3] memory amountB = [uint256(100e18), uint256(300e18), uint256(200e18)];
-        uint total = 0;
-        assertEq(trsy.getIncentiveStatus(),1);
-        for (uint256 i = 0; i < tokenAddress.length; i++) {
-            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
-            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
-            vm.prank(user1);
-            trsy.deposit(tokensA,tokenAddress[i]);
-            vm.prank(user2);
-            trsy.deposit(tokensB,tokenAddress[i]);
-            total += amountA[i]+amountB[i];
-    }   
     assertEq(trsy.getIncentiveStatus(),0);
     uint x = trsy.getTokenAmount(100e18, pools[1]);
     uint y = trsy.getTokenAmount(100e18, pools[2]);
@@ -138,11 +98,8 @@ contract TestIncentive is InitState {
     }
     
     function testIncentiveTiming() public {
-        vm.rollFork(block.number - 3 hours);
-        uint[3] memory amountA = [uint256(1000e18), uint256(2000e18), uint256(1000e18)];
-        uint[3] memory amountB = [uint256(1000e18), uint256(3000e18), uint256(2000e18)];
-        uint total = 0;
-        assertEq(trsy.getIncentiveStatus(),1);
+        uint[3] memory amountA = [uint256(900e18), uint256(1800e18), uint256(900e18)];
+        uint[3] memory amountB = [uint256(900e18), uint256(2700e18), uint256(1800e18)];
         for (uint256 i = 0; i < tokenAddress.length; i++) {
             uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
             uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
@@ -150,7 +107,7 @@ contract TestIncentive is InitState {
             trsy.deposit(tokensA,tokenAddress[i]);
             vm.prank(user2);
             trsy.deposit(tokensB,tokenAddress[i]);
-            total += amountA[i]+amountB[i];
+           
     }   
     uint endtime = block.timestamp + 2 hours;
     emit log_uint(endtime);

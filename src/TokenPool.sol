@@ -61,9 +61,12 @@ function withdrawToken(address receiver, uint256 amount) external  {
     bool success = token.transfer(receiver, amount);
     require(success);
 }
+function setTargetConcentration(uint tc) public  {
+   targetconcentration = tc;
+    
 }
 
 
-
+}
 
 

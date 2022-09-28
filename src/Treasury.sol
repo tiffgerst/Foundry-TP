@@ -215,7 +215,7 @@ function getIncentiveStatus() public view returns (uint) {
             incentivize();
          }
     }
-    function ownerStartIncentive (uint percent) public onlyOwner {
+    function ownerStartIncentive() public onlyOwner { 
        incentivize();
     }
 

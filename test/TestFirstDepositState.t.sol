@@ -8,11 +8,10 @@ import "../src/interfaces/ITokenPool.sol";
 import "../src/Registry.sol";
 import "../src/interfaces/IRegistry.sol";
 contract TestTRSY is FirstDepositState {
-    uint256 public amountDeposited = 10000000000000000000;
     uint256 constant PRECISION = 1e6;
     
     function testMint() public {
-        uint256 usdVal = ITokenPool(pools[1]).getDepositValue(amountDeposited);
+        uint256 usdVal = ITokenPool(pools[1]).getDepositValue(tokenamt);
         uint tax = usdVal * 50000 / PRECISION;
         uint trsyamt = trsy.getTRSYAmount(usdVal-tax);
         assertEq(token.balanceOf(user1), trsyamt);
@@ -21,8 +20,8 @@ contract TestTRSY is FirstDepositState {
 
     function testTransferToken() public {
         address pool = registry.tokenToPool(tokenAddress[1]);
-        assertEq(erc20Contract[1].balanceOf(user1), amountReceived - amountDeposited);
-        assertEq(erc20Contract[1].balanceOf(pool), amountDeposited);
+        assertEq(erc20Contract[1].balanceOf(user1), amountReceived - tokenamt);
+        assertEq(erc20Contract[1].balanceOf(pool), tokenamt);
         emit log_uint(erc20Contract[1].balanceOf(pool));
         emit log_uint((erc20Contract[1].balanceOf(user1)));
 
@@ -49,9 +48,7 @@ contract TestTRSY is FirstDepositState {
         uint256 usdVal = (aum * shareOfThePool) / PRECISION;
         assertEq(trsy.getWithdrawAmount(tsryToWithdraw), usdVal);
     }
-    function testPrice() public {
-        emit log_uint(trsy.getTokenAmount(419232812450000000000, pools[1]));
-    }
+    
     function testWithdraw() public {
         uint prebal = token.balanceOf(user1);
         uint prebaltrsy = token.balanceOf(address(trsy));
@@ -62,8 +59,8 @@ contract TestTRSY is FirstDepositState {
         trsy.withdraw(tsryToWithdraw);
         assertEq(token.balanceOf(user1), prebal - tsryToWithdraw);
         assertEq(token.balanceOf(address(trsy)), prebaltrsy + withdrawtax);
-        assertEq(erc20Contract[1].balanceOf(pool), amountDeposited - trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool));
-        assertEq(erc20Contract[1].balanceOf(user1), amountReceived - amountDeposited + trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool));   
+        assertEq(erc20Contract[1].balanceOf(pool), tokenamt - trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool));
+        assertEq(erc20Contract[1].balanceOf(user1), amountReceived - tokenamt + trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool));   
     }  
 
     function testFuzzWithdraw(uint256 amount) public {
@@ -72,20 +69,17 @@ contract TestTRSY is FirstDepositState {
         uint preBalance = token.balanceOf(user1);
         uint prebaltrsy = token.balanceOf(address(trsy));
         address pool = registry.tokenToPool(tokenAddress[1]); //pool to withdraw from
-        uint256 withdrawtax = trsy.calculateTax(tsryToWithdraw, user1); //tax to be paid upon withdraw
-        uint256 usdVal = ITokenPool(pools[1]).getDepositValue(amountDeposited); //how much was initially deposited         
+        uint256 withdrawtax = trsy.calculateTax(tsryToWithdraw, user1); //tax to be paid upon withdraw      
         vm.prank(user1);
         trsy.withdraw(tsryToWithdraw);
         assertEq(token.balanceOf(user1), preBalance - tsryToWithdraw);
         assertEq(token.balanceOf(address(trsy)), prebaltrsy + withdrawtax);
-        assertApproxEqRel(erc20Contract[1].balanceOf(pool), amountDeposited - trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool),1e18);
-        assertApproxEqRel(erc20Contract[1].balanceOf(user1), amountReceived - amountDeposited + trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool),1e18);   
-        assertApproxEqRel(registry.getTotalAUMinUSD(), usdVal - trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool),1e18); 
-}
+        assertApproxEqRel(erc20Contract[1].balanceOf(pool), tokenamt - trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool),1e15);
+        assertApproxEqRel(erc20Contract[1].balanceOf(user1), amountReceived - tokenamt + trsy.getTokenAmount(tsryToWithdraw-withdrawtax, pool),1e15);   
+        }
 }
 
 contract TestRegistry is FirstDepositState {
-    uint256 public amountDeposited = 10000000000000000000;
     uint256 constant PRECISION = 1e6;
 
     function testgetConcentrationDifference() public {
@@ -103,7 +97,7 @@ contract TestRegistry is FirstDepositState {
     }
 
     function testGetAllPoolAUM() public {
-        uint price = ITokenPool(pools[1]).getDepositValue(amountDeposited);
+        uint price = ITokenPool(pools[1]).getDepositValue(tokenamt);
         assertEq(registry.getTotalAUMinUSD(),price );
     } 
 }

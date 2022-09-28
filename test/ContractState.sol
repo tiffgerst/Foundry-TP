@@ -123,23 +123,24 @@ abstract contract InitState is ZeroState {
 
 //@notice On this state we will test the contract state for only one deposit
 abstract contract FirstDepositState is InitState {
-    function setUp() public override {
+    uint public tokenamt;
+        function setUp() public virtual override {
+        vm.rollFork(block.number - 3 hours);
         super.setUp();
-        vm.startPrank(user1);
-        trsy.deposit(10000000000000000000, tokenAddress[1]);
-        vm.stopPrank();
+        tokenamt=trsy.getTokenAmount(10e18,pools[1]);
+        vm.prank(user1);
+        trsy.deposit(tokenamt, tokenAddress[1]);
+        
     }
 }
 
-abstract contract FinalState is InitState {
-    
-    function setUp() public override {
-        vm.rollFork(block.number - 30 days);
+abstract contract MultiDepositState is FirstDepositState {
+     uint total = 10e18;
+    function setUp() public virtual override {
         super.setUp();
-        uint[3] memory amountA = [uint256(1000e18), uint256(2000e18), uint256(5000e18)];
-        uint[3] memory amountB = [uint256(6000e18), uint256(10000e18), uint256(3000e18)];
-
-        uint total = 0;
+       
+       uint[3] memory amountA = [uint256(10e18), uint256(10e18), uint256(50e18)];
+       uint[3] memory amountB = [uint256(10e18), uint256(20e18), uint256(50e18)];
         for (uint256 i = 0; i < tokenAddress.length; i++) {
             uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
             uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
@@ -147,7 +148,42 @@ abstract contract FinalState is InitState {
             trsy.deposit(tokensA,tokenAddress[i]);
             vm.prank(user2);
             trsy.deposit(tokensB,tokenAddress[i]);
-            total += 2 * amountA[i];
+            total += amountA[i] + amountB[i];
+    }   
+    }
+}
+abstract contract IncentiveState is MultiDepositState {
+    function setUp() public virtual override {
+        super.setUp();
+       uint[3] memory amountA = [uint256(90e18), uint256(180e18), uint256(50e18)];
+        uint[3] memory amountB = [uint256(90e18), uint256(280e18), uint256(150e18)]; 
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
+            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
+            vm.prank(user1);
+            trsy.deposit(tokensA,tokenAddress[i]);
+            vm.prank(user2);
+            trsy.deposit(tokensB,tokenAddress[i]);
+    }   
+    }
+}
+
+abstract contract FinalState is IncentiveState {
+    
+    function setUp() public override {
+        vm.rollFork(block.number - 30 days);
+        super.setUp();
+        uint[3] memory amountA = [uint256(900e18), uint256(1800e18), uint256(4900e18)];
+        uint[3] memory amountB = [uint256(5900e18), uint256(9700e18), uint256(2800e18)];
+
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
+            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
+            vm.prank(user1);
+            trsy.deposit(tokensA,tokenAddress[i]);
+            vm.prank(user2);
+            trsy.deposit(tokensB,tokenAddress[i]);
+        
            
     }   
     }

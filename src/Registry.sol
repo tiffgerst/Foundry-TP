@@ -75,6 +75,8 @@ modifier onlyOwner() {
         onlyOwner
     {
         PoolToConcentration[_pool] = _target;
+        TokenPool(_pool).setTargetConcentration(_target);
+
     }
 
 /**

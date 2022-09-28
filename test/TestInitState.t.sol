@@ -28,12 +28,5 @@ contract TestTreasury is InitState {
         trsy.withdraw(0);
     }
 
-    function testAll() public {
-        //address pool = registry.tokenToPool(tokenAddress[0]);
-        uint price = tokenPools[0].getPrice();
-        emit log_uint(price);
-        uint hi= ITokenPool(pools[1]).getPoolValue();
-        emit log_uint(hi);
-    }
 
 }
