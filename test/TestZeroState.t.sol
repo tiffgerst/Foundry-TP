@@ -11,7 +11,7 @@ import "../src/TokenPoolFactory.sol";
 import "./Mocks/MockERC20.sol";
 
 
-///@notice This contract aim to test the params at deployment.
+///@notice This contract tests the params at deployment.
 contract TestZeroState is ZeroState {
     function testSetUpTreasury() public {
         assertEq(trsy.registry(), address(registry));
@@ -36,7 +36,7 @@ contract TestZeroState is ZeroState {
         assertEq(factory.owner(), deployer);
     }
 
-    function testSetUpReservePool() public {
+    function testSetUpTokenPool() public {
         for (uint256 i = 0; i < tokenPools.length; i++) {
             assertEq(tokenPools[i].targetconcentration(), concentration[i]);
             assertEq(tokenPools[i].chainlinkfeed(), feedAddress[i]);
@@ -48,8 +48,8 @@ contract TestZeroState is ZeroState {
             (,int price, , ,) = AggregatorV3Interface(feedAddress[i]).latestRoundData();
             (,int feedprice, , ,) = feedContract[i].latestRoundData();
             assertEq(price, feedprice);
-            assertEq(erc20Contract[i].totalSupply(), 20000000000000000000000);
-            assertEq(erc20Contract[i].balanceOf(deployer), 20000000000000000000000);
+            assertEq(erc20Contract[i].totalSupply(), 100000e18);
+            assertEq(erc20Contract[i].balanceOf(deployer), 100000e18);
             
         }
     } 
@@ -89,12 +89,12 @@ contract TestFactory is ZeroState{
 }
 
 contract TestTreasury is ZeroState {
-    function testWhitelistUser() public {
+    function testFuzzWhitelistUser(address addr) public {
         vm.expectRevert(Treasury.Error_Unauthorized.selector);
-        trsy.whitelistUser(address(10));
+        trsy.whitelistUser(addr);
         vm.prank(deployer);
-        trsy.whitelistUser(address(10));
-        assertEq(trsy.whitelistedUsers(address(10)), true);
+        trsy.whitelistUser(addr);
+        assertEq(trsy.whitelistedUsers(addr), true);
         assertEq(trsy.whitelistedUsers(address(11)), false);
     }
     function testWhitelistToken()public {
@@ -105,27 +105,27 @@ contract TestTreasury is ZeroState {
         assertEq(trsy.whitelistedTokens(address(15)), true);
         assertEq(trsy.whitelistedTokens(address(16)), false);
     }
-    function testDepositNotWhitelisted() public {
-        vm.prank(address(20));
+    function testFuzzWhitelistToken(address addr)public {
+        vm.prank(deployer);
+        trsy.whitelistToken(addr);
+        assertTrue(trsy.whitelistedTokens(addr));
+        
+    }
+    function testFuzzDepositNotWhitelisted(address addr) public {
+        vm.prank(addr);
         vm.expectRevert(bytes("User is not whitelisted"));
         trsy.deposit(100, tokenAddress[1]);
     }
 
-    function testDepositTokenNotWhitelisted() public{
+    function testFuzzDepositTokenNotWhitelisted(address addr) public{
         vm.prank(deployer);
         trsy.whitelistUser(address(2));
         vm.prank(address(2));
         vm.expectRevert(bytes("Token is not whitelisted"));
-        trsy.deposit(100, address(16));
+        trsy.deposit(100, addr);
     }
 
-    function testWithdrawUserNotWhitelisted() public{
-        vm.prank(address(20));
-        vm.expectRevert(bytes("User is not whitelisted"));
-        trsy.withdraw(100);
-    }
-
-    function testGetTRSYamount(uint256 amount) public{
+    function testFuzzGetTRSYamount(uint256 amount) public{
         vm.assume(amount > 0);
         vm.assume(amount < 1e50);
         for (uint256 i = 0; i < tokenAddress.length; i++) {

@@ -7,7 +7,6 @@ contract MockERC20 is ERC20 {
         
         ERC20(name, symbol)
     {
-        _mint(msg.sender, 2*10000e18);
+        _mint(msg.sender, 100000e18);
     }
 }
-

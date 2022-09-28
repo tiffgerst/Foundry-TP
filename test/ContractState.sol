@@ -14,6 +14,7 @@ import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 // ZeroState represent the initial state of the deployment where all the contracts are deployed.
 abstract contract ZeroState is Test {
+    
     Registry public registry;
     TokenPoolFactory public factory;
     Treasury public trsy;
@@ -33,6 +34,7 @@ abstract contract ZeroState is Test {
     uint256  amountReceived = 10000e18;
 
     function setUp() public virtual {
+        
         vm.label(deployer, "Deployer");
         vm.startPrank(deployer);
 
@@ -81,6 +83,8 @@ abstract contract ZeroState is Test {
 abstract contract InitState is ZeroState {
     address user1 = vm.addr(2);
     address user2 = vm.addr(3);
+    address user3 = vm.addr(5);
+    address user4 = vm.addr(6);
 
     ERC20 erc;
 
@@ -98,11 +102,17 @@ abstract contract InitState is ZeroState {
             erc = ERC20(tokenAddress[i]);
             erc.transfer(user1, amountReceived);
             erc.transfer(user2, amountReceived);
+            erc.transfer(user3, amountReceived);
+            erc.transfer(user4, amountReceived);
             trsy.whitelistToken(tokenAddress[i]);
             vm.stopPrank();
             vm.prank(user1);
             erc.approve(address(trsy), amountReceived);
             vm.prank(user2);
+            erc.approve(address(trsy), amountReceived);
+            vm.prank(user3);
+            erc.approve(address(trsy), amountReceived);
+            vm.prank(user4);
             erc.approve(address(trsy), amountReceived);
             unchecked {
                 i++;
@@ -113,10 +123,68 @@ abstract contract InitState is ZeroState {
 
 //@notice On this state we will test the contract state for only one deposit
 abstract contract FirstDepositState is InitState {
-    function setUp() public override {
+    uint public tokenamt;
+        function setUp() public virtual override {
+        vm.rollFork(block.number - 3 hours);
         super.setUp();
-        vm.startPrank(user1);
-        trsy.deposit(10000000000000000000, tokenAddress[1]);
-        vm.stopPrank();
+        tokenamt=trsy.getTokenAmount(10e18,pools[1]);
+        vm.prank(user1);
+        trsy.deposit(tokenamt, tokenAddress[1]);
+        
+    }
+}
+
+abstract contract MultiDepositState is FirstDepositState {
+     uint total = 10e18;
+    function setUp() public virtual override {
+        super.setUp();
+       
+       uint[3] memory amountA = [uint256(10e18), uint256(10e18), uint256(50e18)];
+       uint[3] memory amountB = [uint256(10e18), uint256(20e18), uint256(50e18)];
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
+            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
+            vm.prank(user1);
+            trsy.deposit(tokensA,tokenAddress[i]);
+            vm.prank(user2);
+            trsy.deposit(tokensB,tokenAddress[i]);
+            total += amountA[i] + amountB[i];
+    }   
+    }
+}
+abstract contract IncentiveState is MultiDepositState {
+    function setUp() public virtual override {
+        super.setUp();
+       uint[3] memory amountA = [uint256(90e18), uint256(180e18), uint256(50e18)];
+        uint[3] memory amountB = [uint256(90e18), uint256(280e18), uint256(150e18)]; 
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
+            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
+            vm.prank(user1);
+            trsy.deposit(tokensA,tokenAddress[i]);
+            vm.prank(user2);
+            trsy.deposit(tokensB,tokenAddress[i]);
+    }   
+    }
+}
+
+abstract contract FinalState is IncentiveState {
+    
+    function setUp() public override {
+        vm.rollFork(block.number - 30 days);
+        super.setUp();
+        uint[3] memory amountA = [uint256(900e18), uint256(1800e18), uint256(4900e18)];
+        uint[3] memory amountB = [uint256(5900e18), uint256(9700e18), uint256(2800e18)];
+
+        for (uint256 i = 0; i < tokenAddress.length; i++) {
+            uint tokensA = trsy.getTokenAmount(amountA[i],pools[i]);
+            uint tokensB = trsy.getTokenAmount(amountB[i],pools[i]);
+            vm.prank(user1);
+            trsy.deposit(tokensA,tokenAddress[i]);
+            vm.prank(user2);
+            trsy.deposit(tokensB,tokenAddress[i]);
+        
+           
+    }   
     }
 }

@@ -7,7 +7,6 @@ import "./TokenPool.sol";
 
 contract Registry {
 //Variables
-
 address public owner;
 address[] public tokenPools;
 address public factory; 
@@ -15,8 +14,6 @@ mapping (address => address) public tokenToPool;
 mapping (address => address) public PoolToToken;
 mapping (address => uint256) public PoolToConcentration;
 uint256 constant PRECISION = 1e6;
-
-
 
 
 //Structs
@@ -46,9 +43,20 @@ modifier onlyOwner() {
        owner = msg.sender;
     }
 
-    function setFactory(address _factory) public onlyOwner{
+/**
+@dev function to set the factory address
+@param _factory (address of the factory)
+ */
+    function setFactory(address _factory) external onlyOwner {
         factory = _factory;
     }
+
+/**
+@dev function to add TokenPool to tokenPool array and various mappings
+@param _tokenPool - address of tokenPool
+@param _token - address of token
+@param concentration - value of target concentration 
+ */
     function addTokenPool(address _tokenPool, address _token, uint256 concentration) public {
         require(msg.sender == factory, "Only the factory can add token pools");
         tokenPools.push(_tokenPool);
@@ -57,12 +65,24 @@ modifier onlyOwner() {
         PoolToConcentration[_tokenPool] = concentration;
     }
 
+/** 
+@dev function to update the target concentration of a specific pool 
+@param _pool - address of tokenPool
+@param _target - value of target concentration
+ */
     function setTargetConcentration(address _pool, uint256 _target)
         external
         onlyOwner
     {
         PoolToConcentration[_pool] = _target;
+        TokenPool(_pool).setTargetConcentration(_target);
+
     }
+
+/**
+@dev function to get the total USD value of all assets in the protocol
+iterates through all the pools to get their usd value and adds all the values together
+ */
 
     function getTotalAUMinUSD() public view returns (uint256) {
         uint256 total = 0;
@@ -76,18 +96,27 @@ modifier onlyOwner() {
         return total;
     }
 
+/** 
+@dev function to get the pools to withdraw from and the amount to withdraw from each pool
+@param _amount - amount in usd to be withdrawn
+ */
     function tokensToWithdraw(uint256 _amount) public view returns (address[] memory, uint256[] memory){
         (address[] memory pools, uint256[] memory tokenAmt) = checkWithdraw(_amount);
         return (pools, tokenAmt);
     }
 
 
-    function liquidityCheck(uint256 _amount) public view returns(Rebalancing[] memory, Rebalancing[] memory)  {
-        Rebalancing[] memory deposit = new Rebalancing[](tokenPools.length);
-        Rebalancing[] memory withdraw = new Rebalancing[](tokenPools.length);
+/**
+@dev function that finds which pools need to be rebalanced through a withdraw
+@param _amount - how much usd is to be withdrawn
+Calculates new aum and how much money has to be added/removed from pool to reach the target concentration
+Checks which pool have to have money removed (and how much) and adds them to the array 
+ */
+    function liquidityCheck(uint256 _amount) public view returns(Rebalancing[] memory)  {
+        uint len = tokenPools.length;
+        Rebalancing[] memory withdraw = new Rebalancing[](len);
         uint aum = getTotalAUMinUSD();
         uint newAUM = aum - _amount;
-        uint len = tokenPools.length;
         for (uint i = 0; i < len;) {
             address pool = tokenPools[i];
             uint256 poolBalance = ITokenPool(pool).getPoolValue();
@@ -97,21 +126,22 @@ modifier onlyOwner() {
                 uint256 amt = poolBalance - poolTarget;
                 withdraw[i]=(Rebalancing({pool: pool, amt: amt}));
             }
-            else if (poolBalance < poolTarget){
-                uint256 amt = poolTarget - poolBalance;
-                deposit[i]= (Rebalancing({pool: pool, amt: amt}));
-            }
             else{
-                deposit[i]= (Rebalancing({pool: pool, amt: 0}));
                 withdraw[i]=(Rebalancing({pool: pool, amt: 0}));
             }
             unchecked{++i;}
         }
-        return(deposit, withdraw);
+        return withdraw;
         }
     
+/**
+@dev function that takes the rebalancing array from liquidityCheck and returns the pools to withdraw from
+and how much to withdraw from each pool
+Checks total amount to be withdraw, finds pools with greatest concentration disparity and takes from those first
+@param _amount - amount to be withdrawn
+ */
     function checkWithdraw(uint _amount)public view returns (address[] memory, uint256[] memory){
-        (,Rebalancing[] memory withdraw) = liquidityCheck(_amount);
+        Rebalancing[] memory withdraw = liquidityCheck(_amount);
         uint256 len = withdraw.length;
         address[] memory pool = new address[](len);
         uint[] memory tokenamt = new uint[](len);
@@ -133,7 +163,10 @@ modifier onlyOwner() {
            }
         return (pool, tokenamt);
     }
-
+/**
+@dev helper function that finds which pool has to have the most money withdrawn
+@param _rebalance - rebalancing array 
+ */
         function findMax (Rebalancing[] memory _rebalance) public pure returns (Rebalancing memory, uint256){ 
         uint256 len = _rebalance.length;
         uint max = 0;
@@ -147,12 +180,67 @@ modifier onlyOwner() {
         }
         return (_rebalance[index],index);
     }
+/**
+@dev function to get the current concentration of a specific pool
+@param pool - pool to fnd concentration of 
+ */
 
     function getConcentration(address pool) view public returns(uint){
             uint256 total = getTotalAUMinUSD();
             uint256 poolBalance = ITokenPool(pool).getPoolValue();       
             return total == 0 ? 0 :poolBalance*PRECISION/total;
+        }
+/**
+@dev function to get the concentration of certain pool when a certain amount is added to the pool
+@param pool - pool to find concentration of
+@param amount - amount to be added to pool
+ */
+    function getNewConcentration (address pool, uint amount) view public returns (uint){    
+            uint256 total = getTotalAUMinUSD() + amount;
+            uint256 poolBalance = ITokenPool(pool).getPoolValue() + amount;       
+            return total == 0 ? 0 : poolBalance*PRECISION/total;
             
         }
+/**
+@dev checks if any pool has a concentration more than "percent" % above/below target concentration
+@param percent - percent above/below target concentration 
+ */
+    function checkDeposit(uint percent) public view returns (bool){
+        uint len = tokenPools.length;
+        for (uint i = 0; i < len;) {
+            address pool = tokenPools[i];
+            uint currentConcentration = getConcentration(pool);
+            int diff = int(currentConcentration) - int(PoolToConcentration[pool]);
+            uint absdiff = abs(diff);
+            if (absdiff>percent) {
+                return (true);
+            }
+            unchecked{++i;}
+        }
+        return (false);
+    }
+    function abs (int256 x) public pure returns (uint){
+        if (x<0){
+            x = 0 - x;
+            return uint(x);
+        }
+        else{
+            return uint(x);
+        }
+    }
     
-}
+    function calcDeposit() public view returns (uint){
+        uint total = 0;
+        uint len = tokenPools.length;
+        for (uint i = 0; i < len;) {
+            address pool = tokenPools[i];
+            uint currentConcentration = getConcentration(pool);
+            int diff = int(currentConcentration) - int(PoolToConcentration[pool]);
+            uint absdiff = abs(diff);
+            total += absdiff;
+            unchecked {++i;}
+    } return total;}
+
+    }
+    
+
